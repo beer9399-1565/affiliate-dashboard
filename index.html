@@ -147,6 +147,39 @@ tr:last-child td { border-bottom: 0; }
 .badge { margin-left: auto; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 10px; background: var(--b-soft); color: var(--b); white-space: nowrap; }
 .err-box { background: color-mix(in srgb, var(--bad) 10%, var(--panel)); border-color: color-mix(in srgb, var(--bad) 40%, var(--line)); }
 .loading .val-slot { color: var(--muted); }
+
+/* ตัวกรอง */
+.filters { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 20px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); padding: 12px 16px; }
+.f-group { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.f-label { font-size: 12px; color: var(--muted); font-weight: 600; }
+.f-month { display: flex; align-items: center; gap: 4px; }
+.filters select { appearance: none; font: inherit; font-size: 14px; font-weight: 600; color: var(--fg); background-color: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+  padding: 7px 32px 7px 12px; min-width: 150px; max-width: 100%; cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 16px) 52%, calc(100% - 11px) 52%; background-size: 5px 5px; background-repeat: no-repeat; }
+.filters select:focus-visible, .f-step:focus-visible, .f-clear:focus-visible { outline: 2px solid var(--b); outline-offset: 1px; }
+.f-step { appearance: none; width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); font: inherit; font-size: 18px; line-height: 1; cursor: pointer; }
+.f-step:disabled { opacity: .35; cursor: default; }
+.f-now { display: flex; flex-direction: column; gap: 4px; margin-left: auto; min-width: 0; }
+.f-now strong { color: var(--b); font-size: 15px; }
+.f-clear { appearance: none; border: 0; background: var(--b-soft); color: var(--b); font: inherit; font-size: 13px; font-weight: 700; border-radius: 8px; padding: 8px 14px; cursor: pointer; }
+@media (max-width: 760px), (max-height: 560px) { .filters { position: static; } }
+@media (max-width: 560px) { .f-now { margin-left: 0; width: 100%; } .filters select { min-width: 0; } .f-group { flex: 1 1 100%; } .filters > .f-group:nth-child(2) select { width: 100%; } .f-month select { flex: 1; } }
+.warn { margin: 0; font-size: 13px; color: var(--muted); background: color-mix(in srgb, #F7B928 14%, var(--panel)); border: 1px solid color-mix(in srgb, #F7B928 45%, var(--line)); border-radius: 10px; padding: 10px 14px; }
+.linkish { appearance: none; border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: left; }
+.linkish:hover span:last-child { text-decoration: underline; }
+.linkish:focus-visible { outline: 2px solid var(--b); outline-offset: 2px; border-radius: 4px; }
+tr.sel td { background: var(--b-soft); }
+th.selcol { color: var(--b); }
+.pod.dim { opacity: .45; }
+.chcard.clickable { cursor: pointer; transition: border-color .15s; }
+.chcard.clickable:hover { border-color: var(--b); }
+.chcard.clickable:focus-visible { outline: 2px solid var(--b); outline-offset: 2px; }
+.sharecell { display: flex; align-items: center; gap: 8px; }
+.sharecell .bar { flex: 1; }
+.sharecell .num { font-size: 12px; }
 </style>
 </head>
 <body>
@@ -164,51 +197,67 @@ tr:last-child td { border-bottom: 0; }
     </div>
   </header>
 
+  <section class="filters" id="filters" aria-label="ตัวกรอง">
+    <div class="f-group">
+      <label class="f-label" for="f-month">เดือน</label>
+      <div class="f-month">
+        <button type="button" class="f-step" id="f-prev" aria-label="เดือนก่อนหน้า">‹</button>
+        <select id="f-month"><option value="0">ทั้งปี</option></select>
+        <button type="button" class="f-step" id="f-next" aria-label="เดือนถัดไป">›</button>
+      </div>
+    </div>
+    <div class="f-group">
+      <label class="f-label" for="f-channel">ช่อง</label>
+      <select id="f-channel"><option value="">ทุกช่อง</option></select>
+    </div>
+    <div class="f-now">
+      <span class="f-label">กำลังแสดง</span>
+      <strong id="f-summary">ทั้งปี · ทุกช่อง</strong>
+    </div>
+    <button type="button" class="f-clear" id="f-clear" hidden>ล้างตัวกรอง</button>
+  </section>
+
   <section class="card err-box" id="error" hidden>
     <h2>ดึงข้อมูลจากชีตไม่สำเร็จ</h2>
     <p class="note" id="error-msg"></p>
   </section>
+  <p class="warn" id="mismatch" hidden></p>
 
   <section class="hero">
     <div class="card big">
-      <span class="label">รายได้ถอนสำเร็จทั้งปี</span>
-      <span class="big-val">฿<span id="k-total">—</span></span>
-      <span class="foot">เริ่มมีรายได้เดือน <span id="k-first">—</span> · ไม่สำเร็จ ฿<span id="k-failed">—</span> · ยังไม่เลือกสถานะ ฿<span id="k-pending">—</span></span>
+      <span class="label" id="k1-label">รายได้ถอนสำเร็จ</span>
+      <span class="big-val">฿<span id="k1-val">—</span></span>
+      <span class="foot" id="k1-foot">—</span>
       <div class="spark" id="spark"></div>
     </div>
     <div class="card kpi">
-      <span class="label">เดือนนี้ · <span id="k-cur-label">—</span> (ยังไม่จบเดือน)</span>
-      <span class="kpi-val">฿<span id="k-cur">—</span></span>
-      <div class="meter"><i id="k-meter"></i></div>
-      <span class="foot">ทำได้ <span class="chip" id="k-pct">—</span> ของ <span id="k-prev-label">—</span> ทั้งเดือน (฿<span id="k-prev">—</span>) ในเวลา <span id="k-day">—</span> วัน</span>
+      <span class="label" id="k2-label">เทียบกับเดือนก่อน</span>
+      <span class="kpi-val" id="k2-val">—</span>
+      <span class="foot" id="k2-foot">—</span>
     </div>
     <div class="card kpi">
-      <span class="label">เฉลี่ยต่อเดือน</span>
-      <span class="kpi-val">฿<span id="k-avg">—</span></span>
-      <span class="foot">คิดจาก <span id="k-done">—</span> เดือนที่จบแล้วและมีรายได้</span>
+      <span class="label" id="k3-label">เฉลี่ย</span>
+      <span class="kpi-val" id="k3-val">—</span>
+      <span class="foot" id="k3-foot">—</span>
     </div>
     <div class="card kpi">
-      <span class="label">เดือนที่ดีที่สุด</span>
-      <span class="kpi-val">฿<span id="k-best">—</span></span>
-      <span class="foot">เดือน <span id="k-best-label">—</span></span>
+      <span class="label" id="k4-label">ดีที่สุด</span>
+      <span class="kpi-val" id="k4-val">—</span>
+      <span class="foot" id="k4-foot">—</span>
     </div>
   </section>
 
   <section class="card">
     <div class="hrow"><h2>ไฮไลต์</h2></div>
-    <ul class="insights">
-      <li><span class="ico" aria-hidden="true">↑</span><span>เดือนที่ทำรายได้สูงสุดคือ <b id="i-best-label">—</b> ได้ <b>฿<span id="i-best">—</span></b> สูงกว่าค่าเฉลี่ยต่อเดือน <b><span id="i-best-vs">—</span>%</b></span></li>
-      <li><span class="ico" aria-hidden="true">★</span><span><b id="i-top">—</b> เป็นช่องหลัก ทำรายได้ <b><span id="i-top-share">—</span>%</b> ของทั้งหมด ตามด้วย <b id="i-second">—</b> <b><span id="i-second-share">—</span>%</b></span></li>
-      <li><span class="ico" aria-hidden="true">◎</span><span>มีช่องที่สร้างรายได้แล้ว <b id="i-active">—</b> จาก <b id="i-all">—</b> ช่อง · รายการถอนไม่สำเร็จรวม <b>฿<span id="i-failed">—</span></b></span></li>
-    </ul>
+    <ul class="insights" id="insights"></ul>
   </section>
 
   <section class="card" id="ranking-board">
     <div class="hrow">
-      <div><h2>อันดับช่องที่รายได้ดี</h2><p class="note">ปี <span id="r-year">—</span> · นับเฉพาะรายการที่ถอนสำเร็จ · กดเลือกเกณฑ์ที่ใช้จัดอันดับ</p></div>
+      <div><h2>อันดับช่องที่รายได้ดี</h2><p class="note"><span id="r-period">—</span> · นับเฉพาะรายการที่ถอนสำเร็จ · กดเลือกเกณฑ์ที่ใช้จัดอันดับ</p></div>
       <div class="seg" role="group" aria-label="เกณฑ์จัดอันดับ">
-        <button type="button" data-sort="total" aria-pressed="true">รายได้รวม</button>
-        <button type="button" data-sort="month" aria-pressed="false">เดือนนี้</button>
+        <button type="button" data-sort="total" aria-pressed="true">รายได้</button>
+        <button type="button" data-sort="growth" aria-pressed="false">เติบโต</button>
         <button type="button" data-sort="avg" aria-pressed="false">เฉลี่ยต่อครั้ง</button>
         <button type="button" data-sort="count" aria-pressed="false">จำนวนครั้ง</button>
       </div>
@@ -216,17 +265,17 @@ tr:last-child td { border-bottom: 0; }
     <div class="podium" id="podium"><div class="empty">กำลังโหลด…</div></div>
     <div class="tablewrap">
       <table class="lead">
-        <thead><tr><th>#</th><th>ช่อง</th><th class="r">รายได้รวม (บาท)</th><th>สัดส่วน</th><th class="r">ครั้ง</th><th class="r">เฉลี่ย/ครั้ง</th><th class="r">เดือนนี้</th><th class="r">เทียบเดือนก่อน*</th><th class="r">ถอนล่าสุด</th></tr></thead>
+        <thead><tr><th>#</th><th>ช่อง</th><th class="r">รายได้ (บาท)</th><th>สัดส่วน</th><th class="r">ครั้ง</th><th class="r">เฉลี่ย/ครั้ง</th><th class="r">เทียบเดือนก่อน*</th><th class="r">ถอนล่าสุด</th></tr></thead>
         <tbody id="lead-body"></tbody>
       </table>
     </div>
-    <p class="note" style="margin-top:10px">* เทียบเดือนนี้กับเดือนก่อนในช่วงวันที่เดียวกัน (เช่น 1–10 พ.ย. เทียบ 1–10 ต.ค.)</p>
+    <p class="note" style="margin-top:10px">* <span id="r-cmp">—</span> · กดชื่อช่องเพื่อกรองทั้งหน้า</p>
   </section>
 
   <section class="card" id="channel-stats">
     <div class="hrow">
       <h2>สถิติแต่ละช่อง</h2>
-      <p class="note">เรียงตามรายได้รวม · กราฟเล็ก = รายได้รายเดือนของช่องนั้น</p>
+      <p class="note"><span id="c-period">—</span> · กราฟเล็ก = รายได้รายเดือนของช่องนั้นทั้งปี</p>
     </div>
     <div class="chgrid" id="chgrid"><div class="empty">กำลังโหลด…</div></div>
   </section>
@@ -234,7 +283,7 @@ tr:last-child td { border-bottom: 0; }
   <section class="card">
     <div class="hrow">
       <h2>รายได้รายเดือน แยกตามช่อง</h2>
-      <p class="note">ชี้หรือแตะแท่งเพื่อดูยอดของแต่ละช่อง · แท่งจาง = เดือนที่ยังไม่จบ</p>
+      <p class="note">กดแท่งเพื่อดูเฉพาะเดือนนั้น · แท่งจาง = เดือนที่ยังไม่จบ</p>
     </div>
     <ul class="legend" id="legend"></ul>
     <div class="chart" id="stacked"><div class="empty">กำลังโหลด…</div></div>
@@ -242,7 +291,7 @@ tr:last-child td { border-bottom: 0; }
 
   <div class="two">
     <section class="card">
-      <div class="hrow"><h2>สัดส่วนรายได้ตามช่อง</h2></div>
+      <div class="hrow"><h2>สัดส่วนรายได้ตามช่อง</h2><p class="note" id="d-period">—</p></div>
       <div class="donutwrap">
         <div class="donut" id="donut"></div>
         <div class="tablewrap">
@@ -254,33 +303,40 @@ tr:last-child td { border-bottom: 0; }
       </div>
     </section>
     <section class="card">
-      <div class="hrow"><h2>ช่อง × เดือน</h2><p class="note">สีเข้ม = ยอดสูง</p></div>
+      <div class="hrow"><h2>ช่อง × เดือน</h2><p class="note">สีเข้ม = ยอดสูง · กดช่องตารางเพื่อกรอง</p></div>
       <div class="tablewrap">
         <table class="heat"><thead id="heat-head"></thead><tbody id="heat-body"></tbody></table>
       </div>
     </section>
   </div>
 
-  <p class="pagefoot">ตัวเลขทั้งหมดมาจากแท็บ "แดชบอร์ด" ในชีต ซึ่งรวมยอดจากทุกแถวในแท็บ "บันทึกถอนเงิน" ตามวันที่ถอน · เปลี่ยนปีได้ที่ช่องเลขปีในชีต · หน้านี้ดึงข้อมูลใหม่ทุกครั้งที่เปิด และทุก 1 นาทีขณะเปิดค้างไว้ (Google อาจใช้เวลาไม่กี่นาทีกว่าจะส่งตัวเลขใหม่หลังแก้ชีต)</p>
+  <p class="pagefoot">ตัวเลขทั้งหมดคำนวณจากทุกแถวในแท็บ "บันทึกถอนเงิน" ตามวันที่ถอน และตรวจกับยอดรวมในแท็บ "แดชบอร์ด" ทุกครั้ง · เปลี่ยนปีได้ที่ช่องเลขปีในชีต · หน้านี้ดึงข้อมูลใหม่ทุกครั้งที่เปิด และทุก 1 นาทีขณะเปิดค้างไว้ (Google อาจใช้เวลาไม่กี่นาทีกว่าจะส่งตัวเลขใหม่หลังแก้ชีต)</p>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script>
-// ลิงก์ CSV ของแท็บ "แดชบอร์ด" (gid=220672209) — ชีตแชร์แบบ "ทุกคนที่มีลิงก์ดูได้" จึงอ่านได้ตรง ๆ
+// แท็บ "แดชบอร์ด" (gid=220672209): ใช้เลขปี รายชื่อช่อง และยอดรวมไว้ตรวจความถูกต้อง
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/12zBOjd2iWCW2toi937n0BQ9gqA7bNFC8ahJWwyEfn_U/export?format=csv&gid=220672209';
-// ทุกแถวในแท็บ "บันทึกถอนเงิน" — ใช้ทำอันดับและสถิติแต่ละช่อง (จำนวนครั้ง ค่าเฉลี่ย ถอนล่าสุด)
+// แท็บ "บันทึกถอนเงิน": ทุกแถว ใช้คำนวณตัวเลขทั้งหน้า (กรองเดือน/ช่องได้)
 const LOG_URL = 'https://docs.google.com/spreadsheets/d/12zBOjd2iWCW2toi937n0BQ9gqA7bNFC8ahJWwyEfn_U/gviz/tq?tqx=out:csv&headers=0&sheet=' + encodeURIComponent('บันทึกถอนเงิน');
 const REFRESH_MS = 60000;
 
 const TH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+const TH_FULL = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
 const PALETTE = ['#1877F2', '#42B72A', '#F7B928', '#F02849', '#A033FF', '#00A3A3', '#FF7A00', '#5B7083'];
+const MEDALS = ['#F7B928', '#A8B0BA', '#C8814A'];
 const money = d3.format(',.2f');
 const int = d3.format(',');
 const short = (v) => (v >= 1e6 ? (v / 1e6).toFixed(2) + 'M' : v >= 1000 ? (v / 1000).toFixed(v >= 100000 ? 0 : 1) + 'K' : String(Math.round(v)));
+const pct1 = (v) => v.toFixed(1) + '%';
 const $ = (id) => document.getElementById(id);
 const setText = (id, v) => { const el = $(id); if (el) el.textContent = v == null || v === '' ? '—' : v; };
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-let state = null, drawnOnce = false;
+const sum = (rows) => Math.round(d3.sum(rows, (r) => r.amount) * 100) / 100;
+
+let base = null;           // ข้อมูลจากชีต
+let F = {m: 0, c: ''};     // ตัวกรอง: m = เดือน (0 = ทั้งปี), c = ช่อง ('' = ทุกช่อง)
+let sortKey = 'total', drawnOnce = false;
 
 // ---------- อ่าน CSV ----------
 function parseCSV(text) {
@@ -298,221 +354,21 @@ function parseCSV(text) {
 }
 const num = (s) => { const v = Number(String(s || '').replace(/[,%\s฿]/g, '')); return isFinite(v) ? v : 0; };
 
-function readSheet(text) {
+function readDashboard(text) {
   const rows = parseCSV(text);
   const find = (pred) => rows.findIndex((r) => pred(r));
   const yi = find((r) => (r[0] || '').startsWith('ปี ค.ศ.'));
   const ti = find((r) => r[0] === 'ถอนสำเร็จ');
-  if (ti < 0) throw new Error('ไม่พบการ์ดสรุปยอด — ตรวจว่าลิงก์ที่เผยแพร่เป็นแท็บ "แดชบอร์ด" และรูปแบบ CSV');
+  if (ti < 0) throw new Error('ไม่พบการ์ดสรุปยอดในแท็บ "แดชบอร์ด"');
   const tv = rows[ti + 1] || [];
-  const totals = {year: yi >= 0 ? String(rows[yi][1] || '').trim() : '', success: num(tv[0]), failed: num(tv[1]), pending: num(tv[2]), total: num(tv[3])};
-
   const ci = find((r) => r[0] === 'ช่อง' && r[1] === 'สำเร็จ');
   const channels = [];
   for (let i = ci + 1; ci >= 0 && i < rows.length; i++) {
-    const r = rows[i]; if (r[0] === 'รวมทุกช่อง') break; if (!r[0]) continue;
-    channels.push({channel: r[0], success: num(r[1]), failed: num(r[2]), total: num(r[3]), share: num(r[4])});
+    const r = rows[i]; if (r[0] === 'รวมทุกช่อง') break; if (r[0]) channels.push(r[0]);
   }
-
-  const mi = find((r) => r[0] === 'เดือน' && r[1] === 'สำเร็จ');
-  const months = [];
-  for (let i = mi + 1; mi >= 0 && i < rows.length; i++) {
-    const r = rows[i]; if (r[0] === 'รวมทั้งปี' || !r[0]) break;
-    months.push({month_no: TH.indexOf(r[0]) + 1 || months.length + 1, label: r[0], success: num(r[1]), failed: num(r[2])});
-  }
-
-  const xi = find((r) => r[0] === 'เดือน' && r[1] && r[1] !== 'สำเร็จ');
-  const matrix = [];
-  if (xi >= 0) {
-    const head = rows[xi], cols = [];
-    for (let c = 1; c < head.length; c++) { if (!head[c]) break; cols.push([c, head[c]]); }
-    for (let i = xi + 1; i < rows.length; i++) {
-      const r = rows[i]; if (r[0] === 'รวมทั้งปี' || !r[0]) break;
-      const mno = TH.indexOf(r[0]) + 1;
-      cols.forEach(([c, name]) => matrix.push({month_no: mno, channel: name, amount: num(r[c])}));
-    }
-  }
-  return {totals, channels, months, matrix};
+  return {year: yi >= 0 ? +String(rows[yi][1] || '').trim() : new Date().getFullYear(), sheetTotal: num(tv[0]), channels};
 }
 
-function summarize({totals, channels, months}) {
-  const r2 = (x) => Math.round(x * 100) / 100, r1 = (x) => Math.round(x * 10) / 10;
-  const now = new Date();
-  const sameYear = String(now.getFullYear()) === String(totals.year);
-  const curNo = sameYear ? now.getMonth() + 1 : 12;
-  const cur = months.find((m) => m.month_no === curNo) || {success: 0, label: TH[curNo - 1]};
-  const prev = months.find((m) => m.month_no === curNo - 1) || {success: 0, label: '—'};
-  const done = months.filter((m) => m.month_no < curNo && m.success > 0);
-  const avg = done.length ? r2(d3.sum(done, (m) => m.success) / done.length) : 0;
-  const best = months.reduce((a, m) => (m.success > a.success ? m : a), {success: 0, label: '—'});
-  const first = months.find((m) => m.success > 0);
-  const ranked = channels.slice().sort((a, b) => b.success - a.success);
-  return {
-    curNo, sameYear, cur, prev, avg, best, first, ranked, done: done.length,
-    pctOfPrev: prev.success ? r1(cur.success / prev.success * 100) : null,
-    day: sameYear ? now.getDate() : null,
-    bestVsAvg: avg ? r1((best.success / avg - 1) * 100) : null
-  };
-}
-
-// ---------- วาด ----------
-const colorOf = (name) => { const o = state.k.ranked.map((c) => c.channel); const i = o.indexOf(name); return PALETTE[(i < 0 ? o.length : i) % PALETTE.length]; };
-const monthRange = () => {
-  const firstNo = state.k.first ? state.k.first.month_no : 1;
-  return state.months.filter((m) => m.month_no >= firstNo && m.month_no <= state.k.curNo);
-};
-const swatch = (color) => { const s = document.createElement('span'); s.className = 'sw'; s.style.background = color; return s; };
-const whoCell = (td, name) => { const w = document.createElement('span'); w.className = 'who'; const n = document.createElement('span'); n.textContent = name; w.append(swatch(colorOf(name)), n); td.append(w); };
-
-function renderText() {
-  const {totals} = state, k = state.k;
-  setText('year', totals.year);
-  setText('k-total', money(totals.success));
-  setText('k-first', k.first ? k.first.label : '—');
-  setText('k-failed', money(totals.failed));
-  setText('k-pending', money(totals.pending));
-  setText('k-cur-label', k.cur.label);
-  setText('k-cur', money(k.cur.success));
-  setText('k-pct', k.pctOfPrev == null ? '—' : k.pctOfPrev.toFixed(1) + '%');
-  setText('k-prev-label', k.prev.label);
-  setText('k-prev', money(k.prev.success));
-  setText('k-day', k.day == null ? 'ทั้ง' : int(k.day));
-  $('k-meter').style.width = (k.pctOfPrev == null ? 0 : Math.min(100, k.pctOfPrev)) + '%';
-  setText('k-avg', money(k.avg));
-  setText('k-done', int(k.done));
-  setText('k-best', money(k.best.success));
-  setText('k-best-label', k.best.label);
-  setText('i-best-label', k.best.label);
-  setText('i-best', money(k.best.success));
-  setText('i-best-vs', k.bestVsAvg == null ? '—' : k.bestVsAvg.toFixed(1));
-  setText('i-top', k.ranked[0] ? k.ranked[0].channel : '—');
-  setText('i-top-share', k.ranked[0] ? k.ranked[0].share.toFixed(1) : '—');
-  setText('i-second', k.ranked[1] ? k.ranked[1].channel : '—');
-  setText('i-second-share', k.ranked[1] ? k.ranked[1].share.toFixed(1) : '—');
-  setText('i-active', int(state.channels.filter((c) => c.success > 0).length));
-  setText('i-all', int(state.channels.length));
-  setText('i-failed', money(totals.failed));
-}
-
-function renderSpark() {
-  const el = $('spark'); el.replaceChildren();
-  const data = monthRange(); if (!data.length) return;
-  const W = Math.max(160, el.clientWidth || 200), H = 56;
-  const x = d3.scaleBand().domain(data.map((d) => d.month_no)).range([0, W]).padding(0.25);
-  const y = d3.scaleLinear().domain([0, d3.max(data, (d) => d.success) || 1]).range([H - 2, 4]);
-  const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('preserveAspectRatio', 'none').attr('role', 'img').attr('aria-label', 'แนวโน้มรายได้รายเดือน');
-  svg.selectAll('rect').data(data).join('rect').attr('x', (d) => x(d.month_no)).attr('width', x.bandwidth()).attr('rx', 3)
-    .attr('y', (d) => y(d.success)).attr('height', (d) => H - 2 - y(d.success))
-    .style('fill', 'var(--b)').style('opacity', (d) => (d.month_no === state.k.curNo && state.k.sameYear ? 0.45 : 0.85));
-}
-
-function renderLegend() {
-  $('legend').replaceChildren(...state.k.ranked.map((c) => { const li = document.createElement('li'); li.append(swatch(colorOf(c.channel)), document.createTextNode(c.channel)); return li; }));
-}
-
-function renderStacked() {
-  const el = $('stacked'); el.replaceChildren();
-  const range = monthRange();
-  if (!range.length) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = 'ยังไม่มีรายได้ในปีนี้'; el.append(e); return; }
-  const keys = state.k.ranked.map((c) => c.channel);
-  const rows = range.map((m) => {
-    const o = {month_no: m.month_no, label: m.label, total: m.success};
-    keys.forEach((c) => { const hit = state.matrix.find((r) => r.month_no === m.month_no && r.channel === c); o[c] = hit ? hit.amount : 0; });
-    return o;
-  });
-  const W = Math.max(300, el.clientWidth || 600), H = 320;
-  const m = {top: 24, right: 8, bottom: 28, left: 40};
-  const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('height', H).attr('role', 'img').attr('aria-label', 'กราฟแท่งซ้อน รายได้ถอนสำเร็จรายเดือนแยกตามช่อง');
-  const y = d3.scaleLinear().domain([0, d3.max(rows, (d) => d.total) || 1]).nice().range([H - m.bottom, m.top]);
-  const probe = svg.append('g').attr('class', 'axis').append('text').text(short(y.domain()[1]));
-  m.left = Math.ceil(probe.node().getComputedTextLength() || 30) + 12;
-  probe.node().parentNode.remove();
-  const x = d3.scaleBand().domain(rows.map((d) => d.month_no)).range([m.left, W - m.right]).padding(0.32);
-  svg.append('g').attr('class', 'grid').attr('transform', `translate(${m.left},0)`).call(d3.axisLeft(y).ticks(5).tickSize(-(W - m.left - m.right)).tickFormat(''));
-  svg.append('g').attr('class', 'axis').attr('transform', `translate(${m.left},0)`).call(d3.axisLeft(y).ticks(5).tickFormat(short).tickSize(0)).call((g) => g.select('.domain').remove()).selectAll('text').attr('dx', '-6');
-  const xa = svg.append('g').attr('class', 'axis').attr('transform', `translate(0,${H - m.bottom})`).call(d3.axisBottom(x).tickSize(0).tickFormat((n) => rows.find((r) => r.month_no === n).label));
-  xa.select('.domain').remove(); xa.selectAll('text').attr('dy', '1.2em');
-  const isCur = (n) => n === state.k.curNo && state.k.sameYear;
-  const animate = !drawnOnce && !reduceMotion;
-  d3.stack().keys(keys)(rows).forEach((layer) => {
-    const rects = svg.append('g').style('fill', colorOf(layer.key)).selectAll('rect').data(layer).join('rect')
-      .attr('x', (d) => x(d.data.month_no)).attr('width', x.bandwidth()).style('opacity', (d) => (isCur(d.data.month_no) ? 0.5 : 1));
-    if (animate) rects.attr('y', y(0)).attr('height', 0).transition().duration(700).ease(d3.easeCubicOut).attr('y', (d) => y(d[1])).attr('height', (d) => Math.max(0, y(d[0]) - y(d[1])));
-    else rects.attr('y', (d) => y(d[1])).attr('height', (d) => Math.max(0, y(d[0]) - y(d[1])));
-  });
-  if (x.bandwidth() >= 24) {
-    svg.append('g').selectAll('text').data(rows.filter((d) => d.total > 0)).join('text').attr('class', 'tot').attr('text-anchor', 'middle')
-      .attr('x', (d) => x(d.month_no) + x.bandwidth() / 2).attr('y', (d) => y(d.total) - 6).text((d) => short(d.total));
-  }
-  const tip = document.createElement('div'); tip.className = 'tip'; tip.hidden = true; el.append(tip);
-  const show = (ev, d) => {
-    const head = document.createElement('strong');
-    head.textContent = d.label + (isCur(d.month_no) ? ' (ยังไม่จบเดือน)' : '') + ' · ฿' + money(d.total);
-    const lines = keys.filter((c) => d[c] > 0).map((c) => { const row = document.createElement('div'); const l = document.createElement('span'); l.textContent = c; const v = document.createElement('b'); v.textContent = money(d[c]); row.append(l, v); return row; });
-    tip.replaceChildren(head, ...lines); tip.hidden = false;
-    const box = el.getBoundingClientRect();
-    const p = ev.touches ? ev.touches[0] : ev;
-    tip.style.left = Math.min(Math.max(0, p.clientX - box.left - tip.offsetWidth / 2), box.width - tip.offsetWidth) + 'px';
-    tip.style.top = Math.max(0, p.clientY - box.top - tip.offsetHeight - 14) + 'px';
-  };
-  svg.append('g').selectAll('rect').data(rows).join('rect')
-    .attr('x', (d) => x(d.month_no) - x.step() * x.paddingInner() / 2).attr('width', x.step()).attr('y', m.top).attr('height', H - m.top - m.bottom)
-    .style('fill', 'transparent').style('cursor', 'pointer')
-    .on('mousemove', show).on('touchstart', show, {passive: true}).on('mouseleave', () => { tip.hidden = true; });
-}
-
-function renderDonut() {
-  const el = $('donut'); el.replaceChildren();
-  const data = state.k.ranked.filter((c) => c.success > 0);
-  const S = 170, R = S / 2;
-  const svg = d3.select(el).append('svg').attr('width', S).attr('height', S).attr('viewBox', `0 0 ${S} ${S}`).attr('role', 'img').attr('aria-label', 'แผนภูมิวงกลมสัดส่วนรายได้ตามช่อง');
-  const g = svg.append('g').attr('transform', `translate(${R},${R})`);
-  g.selectAll('path').data(d3.pie().value((d) => d.success).sort(null).padAngle(0.015)(data)).join('path')
-    .attr('d', d3.arc().innerRadius(R * 0.62).outerRadius(R).cornerRadius(3)).style('fill', (d) => colorOf(d.data.channel));
-  g.append('text').attr('text-anchor', 'middle').attr('dy', '-0.2em').style('fill', 'var(--muted)').style('font-size', '12px').style('font-family', 'var(--font)').text('ช่องหลัก');
-  g.append('text').attr('text-anchor', 'middle').attr('dy', '1.1em').style('fill', 'var(--b)').style('font-size', '22px').style('font-weight', '700').style('font-family', 'var(--font)')
-    .text(data[0] ? data[0].share.toFixed(1) + '%' : '—');
-}
-
-function renderRanking() {
-  const tb = $('ranking'); tb.replaceChildren();
-  state.k.ranked.forEach((r) => {
-    const tr = tb.insertRow();
-    whoCell(tr.insertCell(), r.channel);
-    const a = tr.insertCell(); a.className = 'r'; a.textContent = money(r.success);
-    const s = tr.insertCell(); s.className = 'r'; s.textContent = r.share.toFixed(1) + '%';
-  });
-}
-
-function renderHeat() {
-  const range = monthRange();
-  const head = $('heat-head'), body = $('heat-body');
-  head.replaceChildren(); body.replaceChildren();
-  const tr = document.createElement('tr');
-  const th0 = document.createElement('th'); th0.textContent = 'ช่อง'; tr.append(th0);
-  range.forEach((m) => { const th = document.createElement('th'); th.className = 'r'; th.textContent = m.label; tr.append(th); });
-  head.append(tr);
-  if (!range.length) return;
-  const lo = range[0].month_no, hi = range[range.length - 1].month_no;
-  const max = d3.max(state.matrix.filter((r) => r.month_no >= lo && r.month_no <= hi), (r) => r.amount) || 1;
-  state.k.ranked.forEach((c) => {
-    const row = body.insertRow();
-    whoCell(row.insertCell(), c.channel);
-    range.forEach((m) => {
-      const hit = state.matrix.find((r) => r.month_no === m.month_no && r.channel === c.channel);
-      const v = hit ? hit.amount : 0;
-      const td = row.insertCell();
-      td.className = 'cell' + (v ? '' : ' zero');
-      const a = v ? 0.12 + 0.78 * (v / max) : 0;
-      td.style.background = v ? `rgba(24,119,242,${a.toFixed(2)})` : 'transparent';
-      if (a > 0.55) td.style.color = '#fff';
-      td.textContent = v ? short(v) : '–';
-      td.title = c.channel + ' · ' + m.label + ' · ฿' + money(v);
-    });
-  });
-}
-
-// ---------- อันดับ + สถิติแต่ละช่อง (จากแท็บบันทึกถอนเงิน) ----------
 function readLog(text) {
   const out = [];
   parseCSV(text).forEach((r) => {
@@ -520,71 +376,242 @@ function readLog(text) {
     const m = String(r[2] || '').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
     const ch = String(r[0] || '').trim();
     if (!m || !ch || String(r[1] || '').trim() === '') return;
-    out.push({channel: ch, amount: num(r[1]), y: +m[3], m: +m[2], d: +m[1], status: String(r[3] || '').trim()});
+    const st = String(r[3] || '').trim();
+    out.push({channel: ch, amount: num(r[1]), y: +m[3], m: +m[2], d: +m[1], status: st === 'สำเร็จ' || st === 'ไม่สำเร็จ' ? st : 'รอ'});
   });
   return out;
 }
-const fmtDay = (r) => r.d + ' ' + TH[r.m - 1];
-const daysAgo = (r) => { const now = new Date(); const t = new Date(r.y, r.m - 1, r.d); const n = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - t) / 864e5); return n <= 0 ? 'วันนี้' : n === 1 ? 'เมื่อวาน' : n + ' วันก่อน'; };
-const initial = (name) => name.replace(/^[เแโใไ]/, '').charAt(0) || '?';
 
+// ---------- ตัวช่วยคำนวณ ----------
+const now = () => new Date();
+const isCurYear = () => base && base.year === now().getFullYear();
+const curNo = () => (isCurYear() ? now().getMonth() + 1 : 12);
+const okRows = () => base.rows.filter((r) => r.status === 'สำเร็จ');
+const byCh = (rows, c) => (c ? rows.filter((r) => r.channel === c) : rows);
+const byMonth = (rows, m) => (m ? rows.filter((r) => r.m === m) : rows);
+const periodName = (m) => (m ? 'เดือน ' + TH[m - 1] + ' ' + base.year : 'ทั้งปี ' + base.year);
+const isPartial = (m) => isCurYear() && m === curNo();
+const fmtDay = (r) => r.d + ' ' + TH[r.m - 1];
+const daysAgo = (r) => { const n0 = now(); const t = new Date(r.y, r.m - 1, r.d); const n = Math.round((new Date(n0.getFullYear(), n0.getMonth(), n0.getDate()) - t) / 864e5); return n <= 0 ? 'วันนี้' : n === 1 ? 'เมื่อวาน' : n + ' วันก่อน'; };
+const initial = (name) => name.replace(/^[เแโใไ]/, '').charAt(0) || '?';
+const latest = (rows) => rows.reduce((a, r) => (!a || r.m > a.m || (r.m === a.m && r.d > a.d) ? r : a), null);
+// เดือนที่แสดงในกราฟ: ตั้งแต่เดือนแรกที่มีรายได้ ถึงเดือนปัจจุบัน
+const monthList = () => {
+  const ok = okRows(); const first = ok.length ? d3.min(ok, (r) => r.m) : curNo();
+  return d3.range(Math.min(first, curNo()), curNo() + 1);
+};
+// เปรียบเทียบเดือน T กับเดือนก่อนหน้า (ถ้า T ยังไม่จบ เทียบช่วงวันที่เดียวกัน)
+function compareInfo() {
+  const T = F.m || curNo();
+  const P = T - 1;
+  const partial = isPartial(T);
+  const day = partial ? now().getDate() : 31;
+  return {T, P, partial, day,
+    text: P < 1 ? 'ไม่มีเดือนก่อนหน้าในปีนี้ให้เทียบ'
+      : partial ? 'เทียบ ' + TH[T - 1] + ' กับ ' + TH[P - 1] + ' ช่วงวันที่ 1–' + day + ' (เดือนยังไม่จบ)'
+      : 'เทียบ ' + TH[T - 1] + ' กับ ' + TH[P - 1] + ' ทั้งเดือน'};
+}
+function growth(rows, cmp) {
+  if (cmp.P < 1) return {cur: sum(rows.filter((r) => r.m === cmp.T)), prev: 0, delta: null};
+  const cur = sum(rows.filter((r) => r.m === cmp.T && r.d <= cmp.day));
+  const prev = sum(rows.filter((r) => r.m === cmp.P && r.d <= cmp.day));
+  return {cur, prev, delta: prev ? (cur / prev - 1) * 100 : null};
+}
+// สีประจำช่อง: เรียงตามรายได้ทั้งปี (ไม่เปลี่ยนตามตัวกรอง)
+let colorMap = {};
+function buildColors() {
+  const ok = okRows();
+  const order = base.channels.slice().sort((a, b) => sum(byCh(ok, b)) - sum(byCh(ok, a)));
+  colorMap = {}; order.forEach((c, i) => { colorMap[c] = PALETTE[i % PALETTE.length]; });
+  base.order = order;
+}
+const colorOf = (c) => colorMap[c] || PALETTE[PALETTE.length - 1];
+const swatch = (color) => { const s = document.createElement('span'); s.className = 'sw'; s.style.background = color; return s; };
+const whoCell = (td, name, clickable) => {
+  const w = document.createElement(clickable ? 'button' : 'span'); w.className = 'who' + (clickable ? ' linkish' : '');
+  if (clickable) { w.type = 'button'; w.addEventListener('click', () => setFilter({c: F.c === name ? '' : name})); w.title = F.c === name ? 'เลิกกรองช่องนี้' : 'ดูเฉพาะช่องนี้'; }
+  const n = document.createElement('span'); n.textContent = name; w.append(swatch(colorOf(name)), n); td.append(w);
+};
+const deltaEl = (delta, cur) => {
+  const s = document.createElement('span');
+  if (delta == null) { s.className = 'delta flat'; s.textContent = cur > 0 ? 'ใหม่' : '–'; return s; }
+  s.className = 'delta ' + (delta > 0.05 ? 'up' : delta < -0.05 ? 'down' : 'flat');
+  s.textContent = (delta > 0 ? '▲ +' : delta < 0 ? '▼ ' : '') + delta.toFixed(1) + '%';
+  return s;
+};
+const emptyBox = (el, text) => { const e = document.createElement('div'); e.className = 'empty'; e.textContent = text; el.replaceChildren(e); };
+
+// ---------- ตัวกรอง ----------
+function readHash() {
+  const p = new URLSearchParams(location.hash.slice(1));
+  F = {m: +p.get('m') || 0, c: p.get('c') || ''};
+}
+function writeHash() {
+  const p = new URLSearchParams();
+  if (F.m) p.set('m', F.m); if (F.c) p.set('c', F.c);
+  const h = p.toString();
+  try { history.replaceState(null, '', h ? '#' + h : location.pathname + location.search); } catch (e) { /* ไม่เป็นไร */ }
+}
+function setFilter(patch) {
+  F = {...F, ...patch};
+  writeHash();
+  renderAll();
+}
+function syncFilterUI() {
+  const ms = $('f-month'), cs = $('f-channel');
+  const months = monthList();
+  if (F.m && !months.includes(F.m)) F.m = 0;
+  if (F.c && !base.channels.includes(F.c) && !base.rows.some((r) => r.channel === F.c)) F.c = '';
+  ms.replaceChildren(new Option('ทั้งปี ' + base.year, '0'), ...months.map((m) => new Option(TH_FULL[m - 1] + (isPartial(m) ? ' (ยังไม่จบ)' : ''), String(m))));
+  ms.value = String(F.m);
+  cs.replaceChildren(new Option('ทุกช่อง', ''), ...base.order.map((c) => new Option(c, c)));
+  cs.value = F.c;
+  $('f-prev').disabled = F.m === 0 ? false : F.m <= months[0];
+  $('f-next').disabled = F.m === 0 || F.m >= months[months.length - 1];
+  $('f-clear').hidden = !F.m && !F.c;
+  setText('f-summary', periodName(F.m) + ' · ' + (F.c || 'ทุกช่อง'));
+}
+$('f-month').addEventListener('change', (e) => setFilter({m: +e.target.value}));
+$('f-channel').addEventListener('change', (e) => setFilter({c: e.target.value}));
+$('f-clear').addEventListener('click', () => setFilter({m: 0, c: ''}));
+$('f-prev').addEventListener('click', () => { const ms = monthList(); setFilter({m: F.m ? Math.max(ms[0], F.m - 1) : ms[ms.length - 1]}); });
+$('f-next').addEventListener('click', () => { const ms = monthList(); if (F.m) setFilter({m: Math.min(ms[ms.length - 1], F.m + 1)}); });
+
+// ---------- การ์ดตัวเลข ----------
+function renderKpis() {
+  const all = base.rows, ok = okRows();
+  const chOk = byCh(ok, F.c), chAll = byCh(all, F.c);
+  const pOk = byMonth(chOk, F.m), pAll = byMonth(chAll, F.m);
+  const total = sum(pOk);
+  const chTxt = F.c ? ' · ' + F.c : '';
+  setText('year', base.year);
+  setText('k1-label', 'รายได้ถอนสำเร็จ · ' + periodName(F.m) + chTxt + (isPartial(F.m) ? ' (ยังไม่จบเดือน)' : ''));
+  setText('k1-val', money(total));
+  setText('k1-foot', int(pOk.length) + ' ครั้ง · ไม่สำเร็จ ฿' + money(sum(pAll.filter((r) => r.status === 'ไม่สำเร็จ'))) + ' · ยังไม่เลือกสถานะ ฿' + money(sum(pAll.filter((r) => r.status === 'รอ'))));
+
+  const cmp = compareInfo(), g = growth(chOk, cmp);
+  setText('k2-label', 'เทียบเดือนก่อน · ' + TH[cmp.T - 1] + (cmp.P >= 1 ? ' vs ' + TH[cmp.P - 1] : ''));
+  const k2 = $('k2-val'); k2.replaceChildren();
+  if (g.delta == null) k2.textContent = '—'; else k2.append(deltaEl(g.delta, g.cur));
+  setText('k2-foot', cmp.P < 1 ? cmp.text : '฿' + money(g.cur) + ' เทียบ ฿' + money(g.prev) + (cmp.partial ? ' · ช่วงวันที่ 1–' + cmp.day : ' · ทั้งเดือน'));
+
+  if (F.m) {
+    setText('k3-label', 'เฉลี่ยต่อการถอน 1 ครั้ง');
+    setText('k3-val', pOk.length ? '฿' + money(total / pOk.length) : '—');
+    setText('k3-foot', 'จาก ' + int(pOk.length) + ' ครั้งใน' + TH[F.m - 1]);
+  } else {
+    const done = d3.range(1, curNo()).map((m) => sum(byMonth(chOk, m))).filter((v) => v > 0);
+    setText('k3-label', 'เฉลี่ยต่อเดือน');
+    setText('k3-val', done.length ? '฿' + money(d3.mean(done)) : '—');
+    setText('k3-foot', 'คิดจาก ' + done.length + ' เดือนที่จบแล้วและมีรายได้');
+  }
+
+  if (!F.m) {
+    const best = d3.range(1, 13).map((m) => [m, sum(byMonth(chOk, m))]).sort((a, b) => b[1] - a[1])[0];
+    setText('k4-label', 'เดือนที่ดีที่สุด' + chTxt);
+    setText('k4-val', best && best[1] ? '฿' + money(best[1]) : '—');
+    setText('k4-foot', best && best[1] ? 'เดือน ' + TH_FULL[best[0] - 1] : 'ยังไม่มีรายได้');
+  } else if (!F.c) {
+    const mOk = byMonth(ok, F.m);
+    const top = base.order.map((c) => [c, sum(byCh(mOk, c))]).sort((a, b) => b[1] - a[1])[0];
+    setText('k4-label', 'ช่องที่ดีที่สุดของเดือน');
+    setText('k4-val', top && top[1] ? '฿' + money(top[1]) : '—');
+    setText('k4-foot', top && top[1] ? top[0] + ' · ' + pct1(top[1] / (sum(mOk) || 1) * 100) + ' ของเดือนนี้' : 'ยังไม่มีรายได้ในเดือนนี้');
+  } else {
+    const mx = pOk.reduce((a, r) => (!a || r.amount > a.amount ? r : a), null);
+    setText('k4-label', 'ถอนสูงสุดต่อครั้ง');
+    setText('k4-val', mx ? '฿' + money(mx.amount) : '—');
+    setText('k4-foot', mx ? 'วันที่ ' + fmtDay(mx) : 'ยังไม่มีการถอนในเดือนนี้');
+  }
+}
+
+function renderSpark() {
+  const el = $('spark'); el.replaceChildren();
+  const ms = monthList(), chOk = byCh(okRows(), F.c);
+  const data = ms.map((m) => ({m, v: sum(byMonth(chOk, m))}));
+  const W = Math.max(160, el.clientWidth || 200), H = 56;
+  const x = d3.scaleBand().domain(ms).range([0, W]).padding(0.25);
+  const y = d3.scaleLinear().domain([0, d3.max(data, (d) => d.v) || 1]).range([H - 2, 4]);
+  const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('preserveAspectRatio', 'none').attr('role', 'img').attr('aria-label', 'แนวโน้มรายได้รายเดือน');
+  svg.selectAll('rect').data(data).join('rect').attr('x', (d) => x(d.m)).attr('width', x.bandwidth()).attr('rx', 3)
+    .attr('y', (d) => (d.v ? y(d.v) : H - 3)).attr('height', (d) => (d.v ? H - 2 - y(d.v) : 1))
+    .style('fill', F.c ? colorOf(F.c) : 'var(--b)')
+    .style('opacity', (d) => (F.m ? (d.m === F.m ? 1 : 0.25) : isPartial(d.m) ? 0.45 : 0.85));
+}
+
+// ---------- ไฮไลต์ ----------
+function renderInsights() {
+  const ok = okRows(), chOk = byCh(ok, F.c), pOk = byMonth(chOk, F.m), mAll = byMonth(ok, F.m);
+  const items = [];
+  const t = (s) => document.createTextNode(s);
+  const b = (s) => { const e = document.createElement('b'); e.textContent = s; return e; };
+  if (!F.m) {
+    const monthsV = d3.range(1, 13).map((m) => [m, sum(byMonth(chOk, m))]);
+    const best = monthsV.slice().sort((a, b2) => b2[1] - a[1])[0];
+    const done = monthsV.filter(([m, v]) => m < curNo() && v > 0).map(([, v]) => v);
+    const avg = done.length ? d3.mean(done) : 0;
+    if (best && best[1]) items.push(['↑', [t('เดือนที่ทำรายได้สูงสุด' + (F.c ? 'ของ ' + F.c : '') + 'คือ '), b(TH_FULL[best[0] - 1]), t(' ได้ '), b('฿' + money(best[1])), ...(avg ? [t(' สูงกว่าค่าเฉลี่ยต่อเดือน '), b(pct1((best[1] / avg - 1) * 100))] : [])]]);
+  } else {
+    const yearTotal = sum(chOk), v = sum(pOk);
+    items.push(['↑', [t('เดือน'), b(TH_FULL[F.m - 1]), t(F.c ? ' ' + F.c + ' ทำรายได้ ' : ' ทำรายได้ '), b('฿' + money(v)), t(' คิดเป็น '), b(pct1(yearTotal ? v / yearTotal * 100 : 0)), t(' ของรายได้ทั้งปี' + (isPartial(F.m) ? ' (เดือนยังไม่จบ)' : ''))]]);
+  }
+  const pTotal = sum(mAll) || 0;
+  const ranked = base.order.map((c) => [c, sum(byCh(mAll, c))]).sort((a, b2) => b2[1] - a[1]);
+  if (!F.c) {
+    if (ranked[0] && ranked[0][1]) items.push(['★', [b(ranked[0][0]), t(' เป็นช่องหลักใน' + periodName(F.m) + ' ทำรายได้ '), b(pct1(ranked[0][1] / pTotal * 100)), ...(ranked[1] && ranked[1][1] ? [t(' ตามด้วย '), b(ranked[1][0]), t(' '), b(pct1(ranked[1][1] / pTotal * 100))] : [])]]);
+  } else {
+    const idx = ranked.findIndex(([c]) => c === F.c), v = ranked[idx] ? ranked[idx][1] : 0;
+    items.push(['★', [b(F.c), t(' ทำรายได้ '), b(pct1(pTotal ? v / pTotal * 100 : 0)), t(' ของรายได้ทุกช่องใน' + periodName(F.m) + ' · อยู่อันดับ '), b(String(v ? idx + 1 : '–')), t(' จาก ' + ranked.length + ' ช่อง')]]);
+  }
+  const last = latest(pOk);
+  items.push(['◎', [t('ถอนเงินสำเร็จ '), b(int(pOk.length) + ' ครั้ง'), t(' ใน' + periodName(F.m)), ...(pOk.length ? [t(' · เฉลี่ยครั้งละ '), b('฿' + money(sum(pOk) / pOk.length))] : []), ...(last ? [t(' · ล่าสุด '), b(fmtDay(last))] : [])]]);
+  $('insights').replaceChildren(...items.map(([ico, parts]) => {
+    const li = document.createElement('li');
+    const i = document.createElement('span'); i.className = 'ico'; i.setAttribute('aria-hidden', 'true'); i.textContent = ico;
+    const s = document.createElement('span'); s.append(...parts);
+    li.append(i, s); return li;
+  }));
+}
+
+// ---------- อันดับ + สถิติแต่ละช่อง ----------
 function channelStats() {
-  const year = +state.totals.year, k = state.k, today = new Date().getDate();
-  const ok = (state.log || []).filter((r) => r.y === year && r.status === 'สำเร็จ');
-  const names = [...new Set([...state.channels.map((c) => c.channel), ...ok.map((r) => r.channel)])];
-  const grand = d3.sum(ok, (r) => r.amount) || 0;
-  const list = names.map((name) => {
-    const rs = ok.filter((r) => r.channel === name);
-    const total = Math.round(d3.sum(rs, (r) => r.amount) * 100) / 100;
-    const byM = d3.rollup(rs, (v) => d3.sum(v, (r) => r.amount), (r) => r.m);
+  const ok = okRows(), cmp = compareInfo();
+  const pOk = byMonth(ok, F.m), grand = sum(pOk);
+  const list = base.order.map((name) => {
+    const yr = byCh(ok, name), rs = byCh(pOk, name);
+    const total = sum(rs);
+    const byM = d3.rollup(yr, (v) => d3.sum(v, (r) => r.amount), (r) => r.m);
     const bestM = [...byM.entries()].sort((a, b) => b[1] - a[1])[0];
-    const sorted = rs.slice().sort((a, b) => (a.m - b.m) || (a.d - b.d));
-    const maxR = rs.reduce((a, r) => (!a || r.amount > a.amount ? r : a), null);
-    const cur = k.sameYear ? d3.sum(rs.filter((r) => r.m === k.curNo), (r) => r.amount) : 0;
-    const prevSame = k.sameYear ? d3.sum(rs.filter((r) => r.m === k.curNo - 1 && r.d <= today), (r) => r.amount) : 0;
+    const g = growth(yr, cmp);
     return {
       name, total, count: rs.length, avg: rs.length ? total / rs.length : 0,
       share: grand ? total / grand * 100 : 0,
-      max: maxR, last: sorted[sorted.length - 1] || null,
+      max: rs.reduce((a, r) => (!a || r.amount > a.amount ? r : a), null),
+      last: latest(rs), lastEver: latest(yr),
       bestLabel: bestM ? TH[bestM[0] - 1] : '—', bestAmt: bestM ? bestM[1] : 0,
-      activeMonths: byM.size, cur, prevSame,
-      delta: prevSame ? (cur / prevSame - 1) * 100 : null,
-      monthly: monthRange().map((m) => ({month_no: m.month_no, amount: byM.get(m.month_no) || 0}))
+      activeMonths: byM.size, g,
+      monthly: monthList().map((m) => ({m, v: byM.get(m) || 0}))
     };
   });
-  const byTotal = list.slice().sort((a, b) => b.total - a.total);
-  byTotal.forEach((c, i) => { c.rankTotal = i + 1; });
-  return byTotal;
+  list.slice().sort((a, b) => b.total - a.total).forEach((c, i) => { c.rank = c.total ? i + 1 : null; });
+  return list;
 }
-
-let sortKey = 'total';
 const SORTS = {
-  total: {get: (c) => c.total, fmt: (c) => '฿' + money(c.total), sub: (c) => c.share.toFixed(1) + '% ของรายได้ทั้งหมด'},
-  month: {get: (c) => c.cur, fmt: (c) => '฿' + money(c.cur), sub: (c) => 'เดือน ' + state.k.cur.label + ' (ยังไม่จบเดือน)'},
-  avg: {get: (c) => c.avg, fmt: (c) => '฿' + money(c.avg), sub: (c) => 'เฉลี่ยต่อการถอน 1 ครั้ง · ' + c.count + ' ครั้ง'},
+  total: {get: (c) => c.total, fmt: (c) => '฿' + money(c.total), sub: (c) => pct1(c.share) + ' ของรายได้ใน' + periodName(F.m)},
+  growth: {get: (c) => (c.g.delta == null ? -Infinity : c.g.delta), fmt: (c) => (c.g.delta == null ? '–' : (c.g.delta > 0 ? '+' : '') + pct1(c.g.delta)), sub: (c) => '฿' + money(c.g.cur) + ' เทียบ ฿' + money(c.g.prev)},
+  avg: {get: (c) => c.avg, fmt: (c) => '฿' + money(c.avg), sub: (c) => 'เฉลี่ยต่อครั้ง · ' + c.count + ' ครั้ง'},
   count: {get: (c) => c.count, fmt: (c) => int(c.count) + ' ครั้ง', sub: (c) => 'รวม ฿' + money(c.total)}
 };
-const MEDALS = ['#F7B928', '#A8B0BA', '#C8814A'];
 
-function deltaEl(c) {
-  const s = document.createElement('span');
-  if (c.delta == null) { s.className = 'delta flat'; s.textContent = c.cur > 0 ? 'ใหม่' : '–'; return s; }
-  s.className = 'delta ' + (c.delta > 0.05 ? 'up' : c.delta < -0.05 ? 'down' : 'flat');
-  s.textContent = (c.delta > 0 ? '▲ +' : c.delta < 0 ? '▼ ' : '') + c.delta.toFixed(1) + '%';
-  return s;
-}
-
-function renderBoard() {
-  setText('r-year', state.totals.year);
+function renderBoard(stats) {
+  setText('r-period', periodName(F.m));
+  setText('r-cmp', compareInfo().text);
   const pod = $('podium'), body = $('lead-body');
   pod.replaceChildren(); body.replaceChildren();
-  if (!state.log) {
-    const e = document.createElement('div'); e.className = 'empty'; e.textContent = 'อ่านแท็บ "บันทึกถอนเงิน" ไม่สำเร็จ จึงยังจัดอันดับไม่ได้'; pod.append(e); return;
-  }
   const S = SORTS[sortKey];
-  const list = state.stats.slice().sort((a, b) => (S.get(b) - S.get(a)) || (b.total - a.total));
-  list.filter((c) => S.get(c) > 0).slice(0, 3).forEach((c, i) => {
-    const d = document.createElement('div'); d.className = 'pod' + (i === 0 ? ' p1' : '');
+  const list = stats.slice().sort((a, b) => (S.get(b) - S.get(a)) || (b.total - a.total));
+  list.filter((c) => (sortKey === 'growth' ? c.g.delta != null : S.get(c) > 0)).slice(0, 3).forEach((c, i) => {
+    const d = document.createElement('div'); d.className = 'pod' + (i === 0 ? ' p1' : '') + (F.c && F.c !== c.name ? ' dim' : '');
     const head = document.createElement('div'); head.className = 'pod-rank';
     const md = document.createElement('span'); md.className = 'medal'; md.style.background = MEDALS[i]; md.textContent = i + 1;
     const nm = document.createElement('span'); nm.className = 'pod-name'; nm.textContent = c.name;
@@ -593,42 +620,43 @@ function renderBoard() {
     const sub = document.createElement('span'); sub.className = 'pod-sub'; sub.textContent = S.sub(c);
     d.append(head, v, sub); pod.append(d);
   });
-  if (!pod.children.length) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = 'ยังไม่มีช่องที่มียอดตามเกณฑ์นี้'; pod.append(e); }
+  if (!pod.children.length) emptyBox(pod, 'ยังไม่มีช่องที่มียอดตามเกณฑ์นี้ใน' + periodName(F.m));
   const maxTotal = d3.max(list, (c) => c.total) || 1;
   list.forEach((c, i) => {
-    const tr = body.insertRow();
+    const tr = body.insertRow(); if (F.c === c.name) tr.className = 'sel';
     const n = tr.insertCell(); const rn = document.createElement('span'); rn.className = 'rankno'; rn.textContent = i + 1; n.append(rn);
-    whoCell(tr.insertCell(), c.name);
+    whoCell(tr.insertCell(), c.name, true);
     const t = tr.insertCell(); t.className = 'r'; t.textContent = money(c.total);
-    const sh = tr.insertCell(); const wrap = document.createElement('div'); wrap.style.display = 'flex'; wrap.style.alignItems = 'center'; wrap.style.gap = '8px';
-    const bar = document.createElement('div'); bar.className = 'bar'; bar.style.flex = '1';
+    const sh = tr.insertCell(); const wrap = document.createElement('div'); wrap.className = 'sharecell';
+    const bar = document.createElement('div'); bar.className = 'bar';
     const fill = document.createElement('i'); fill.style.width = (c.total / maxTotal * 100) + '%'; fill.style.background = colorOf(c.name);
-    bar.append(fill); const pct = document.createElement('span'); pct.className = 'num'; pct.style.fontSize = '12px'; pct.textContent = c.share.toFixed(1) + '%';
-    wrap.append(bar, pct); sh.append(wrap);
+    bar.append(fill); const pc = document.createElement('span'); pc.className = 'num'; pc.textContent = pct1(c.share);
+    wrap.append(bar, pc); sh.append(wrap);
     const cn = tr.insertCell(); cn.className = 'r'; cn.textContent = int(c.count);
     const av = tr.insertCell(); av.className = 'r'; av.textContent = c.count ? money(c.avg) : '–';
-    const cu = tr.insertCell(); cu.className = 'r'; cu.textContent = c.cur ? money(c.cur) : '–';
-    const de = tr.insertCell(); de.className = 'r'; de.append(deltaEl(c));
+    const de = tr.insertCell(); de.className = 'r'; de.append(deltaEl(c.g.delta, c.g.cur));
     const la = tr.insertCell(); la.className = 'r'; la.textContent = c.last ? fmtDay(c.last) : '–';
   });
 }
 
-function renderChannelCards() {
+function renderChannelCards(stats) {
+  setText('c-period', periodName(F.m) + (F.c ? ' · เฉพาะ ' + F.c : ''));
   const grid = $('chgrid'); grid.replaceChildren();
-  if (!state.log) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = 'อ่านแท็บ "บันทึกถอนเงิน" ไม่สำเร็จ'; grid.append(e); return; }
-  state.stats.forEach((c) => {
+  const cmp = compareInfo();
+  const show = stats.slice().sort((a, b) => b.total - a.total).filter((c) => !F.c || c.name === F.c);
+  show.forEach((c) => {
     const card = document.createElement('article'); card.className = 'card chcard' + (c.total ? '' : ' idle');
     const head = document.createElement('div'); head.className = 'chhead';
     const av = document.createElement('span'); av.className = 'av'; av.style.background = colorOf(c.name); av.textContent = initial(c.name); av.setAttribute('aria-hidden', 'true');
     const info = document.createElement('div'); info.style.minWidth = '0';
     const nm = document.createElement('div'); nm.className = 'chname'; nm.textContent = c.name;
     const meta = document.createElement('div'); meta.className = 'chmeta';
-    meta.textContent = c.last ? 'ถอนล่าสุด ' + fmtDay(c.last) + ' · ' + daysAgo(c.last) : 'ยังไม่มีการถอนในปีนี้';
+    meta.textContent = c.lastEver ? 'ถอนล่าสุด ' + fmtDay(c.lastEver) + ' · ' + daysAgo(c.lastEver) : 'ยังไม่มีการถอนในปีนี้';
     info.append(nm, meta);
-    const badge = document.createElement('span'); badge.className = 'badge'; badge.textContent = c.total ? 'อันดับ ' + c.rankTotal : 'ยังไม่มีรายได้';
+    const badge = document.createElement('span'); badge.className = 'badge'; badge.textContent = c.rank ? 'อันดับ ' + c.rank : 'ไม่มีรายได้';
     head.append(av, info, badge);
     const tot = document.createElement('div');
-    const tl = document.createElement('div'); tl.className = 'label'; tl.textContent = 'รายได้รวม · ' + c.share.toFixed(1) + '% ของทั้งหมด';
+    const tl = document.createElement('div'); tl.className = 'label'; tl.textContent = 'รายได้ ' + periodName(F.m) + ' · ' + pct1(c.share) + ' ของทุกช่อง';
     const tv = document.createElement('div'); tv.className = 'chtotal'; tv.textContent = '฿' + money(c.total);
     tot.append(tl, tv);
     const dl = document.createElement('dl'); dl.className = 'stats';
@@ -636,39 +664,151 @@ function renderChannelCards() {
     add('จำนวนครั้งที่ถอน', int(c.count) + ' ครั้ง');
     add('เฉลี่ยต่อครั้ง', c.count ? '฿' + money(c.avg) : '–');
     add('ถอนสูงสุดต่อครั้ง', c.max ? '฿' + money(c.max.amount) : '–');
-    add('เดือนที่ดีที่สุด', c.bestAmt ? c.bestLabel + ' · ฿' + short(c.bestAmt) : '–');
-    add('เดือนนี้ (' + state.k.cur.label + ')', c.cur ? '฿' + money(c.cur) : '–');
-    const dwrap = document.createElement('span'); dwrap.append(deltaEl(c));
-    add('เทียบเดือนก่อน*', dwrap);
-    add('เดือนที่มีรายได้', c.activeMonths + ' เดือน');
-    add('ส่วนแบ่งรายได้', c.share.toFixed(1) + '%');
+    add('ถอนล่าสุดในช่วงนี้', c.last ? fmtDay(c.last) : '–');
+    const dw = document.createElement('span'); dw.append(deltaEl(c.g.delta, c.g.cur));
+    add(TH[cmp.T - 1] + (cmp.P >= 1 ? ' เทียบ ' + TH[cmp.P - 1] : ''), dw);
+    add('เดือนที่ดีที่สุด (ทั้งปี)', c.bestAmt ? c.bestLabel + ' · ฿' + short(c.bestAmt) : '–');
     const sp = document.createElement('div'); sp.className = 'chspark';
     card.append(head, tot, dl, sp);
+    if (!F.c) { card.classList.add('clickable'); card.tabIndex = 0; card.setAttribute('role', 'button'); card.setAttribute('aria-label', 'ดูเฉพาะ ' + c.name);
+      card.addEventListener('click', () => setFilter({c: c.name}));
+      card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setFilter({c: c.name}); } }); }
     grid.append(card);
-    if (c.total) {
+    if (c.activeMonths) {
       const W = Math.max(200, sp.clientWidth || 240), H = 44;
-      const x = d3.scaleBand().domain(c.monthly.map((d) => d.month_no)).range([0, W]).padding(0.25);
-      const y = d3.scaleLinear().domain([0, d3.max(c.monthly, (d) => d.amount) || 1]).range([H - 2, 3]);
+      const x = d3.scaleBand().domain(c.monthly.map((d) => d.m)).range([0, W]).padding(0.25);
+      const y = d3.scaleLinear().domain([0, d3.max(c.monthly, (d) => d.v) || 1]).range([H - 2, 3]);
       const svg = d3.select(sp).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('preserveAspectRatio', 'none').attr('role', 'img').attr('aria-label', 'รายได้รายเดือนของ ' + c.name);
-      svg.selectAll('rect').data(c.monthly).join('rect').attr('x', (d) => x(d.month_no)).attr('width', x.bandwidth()).attr('rx', 2)
-        .attr('y', (d) => (d.amount ? y(d.amount) : H - 3)).attr('height', (d) => (d.amount ? H - 2 - y(d.amount) : 1))
-        .style('fill', colorOf(c.name)).style('opacity', (d) => (d.month_no === state.k.curNo && state.k.sameYear ? 0.5 : 0.9))
-        .append('title').text((d) => TH[d.month_no - 1] + ' · ฿' + money(d.amount));
+      svg.selectAll('rect').data(c.monthly).join('rect').attr('x', (d) => x(d.m)).attr('width', x.bandwidth()).attr('rx', 2)
+        .attr('y', (d) => (d.v ? y(d.v) : H - 3)).attr('height', (d) => (d.v ? H - 2 - y(d.v) : 1))
+        .style('fill', colorOf(c.name)).style('opacity', (d) => (F.m ? (d.m === F.m ? 1 : 0.25) : isPartial(d.m) ? 0.5 : 0.9))
+        .append('title').text((d) => TH[d.m - 1] + ' · ฿' + money(d.v));
     }
+  });
+  if (!show.length) emptyBox(grid, 'ไม่มีข้อมูลช่องนี้');
+}
+
+// ---------- กราฟรายเดือน ----------
+function renderLegend() {
+  $('legend').replaceChildren(...base.order.filter((c) => !F.c || c === F.c).map((c) => { const li = document.createElement('li'); li.append(swatch(colorOf(c)), document.createTextNode(c)); return li; }));
+}
+function renderStacked() {
+  const el = $('stacked'); el.replaceChildren();
+  const ok = okRows(), ms = monthList();
+  const keys = base.order.filter((c) => !F.c || c === F.c);
+  const rows = ms.map((m) => { const o = {m, label: TH[m - 1]}; let t = 0; keys.forEach((c) => { o[c] = sum(byMonth(byCh(ok, c), m)); t += o[c]; }); o.total = Math.round(t * 100) / 100; return o; });
+  if (!d3.sum(rows, (r) => r.total)) { emptyBox(el, 'ยังไม่มีรายได้' + (F.c ? 'ของ ' + F.c : '') + 'ในปีนี้'); return; }
+  const W = Math.max(300, el.clientWidth || 600), H = 320, m = {top: 24, right: 8, bottom: 28, left: 40};
+  const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('height', H).attr('role', 'img').attr('aria-label', 'กราฟแท่งซ้อน รายได้ถอนสำเร็จรายเดือนแยกตามช่อง');
+  const y = d3.scaleLinear().domain([0, d3.max(rows, (d) => d.total) || 1]).nice().range([H - m.bottom, m.top]);
+  const probe = svg.append('g').attr('class', 'axis').append('text').text(short(y.domain()[1]));
+  m.left = Math.ceil(probe.node().getComputedTextLength() || 30) + 12; probe.node().parentNode.remove();
+  const x = d3.scaleBand().domain(ms).range([m.left, W - m.right]).padding(0.32);
+  svg.append('g').attr('class', 'grid').attr('transform', `translate(${m.left},0)`).call(d3.axisLeft(y).ticks(5).tickSize(-(W - m.left - m.right)).tickFormat(''));
+  svg.append('g').attr('class', 'axis').attr('transform', `translate(${m.left},0)`).call(d3.axisLeft(y).ticks(5).tickFormat(short).tickSize(0)).call((g) => g.select('.domain').remove()).selectAll('text').attr('dx', '-6');
+  const xa = svg.append('g').attr('class', 'axis').attr('transform', `translate(0,${H - m.bottom})`).call(d3.axisBottom(x).tickSize(0).tickFormat((n) => TH[n - 1]));
+  xa.select('.domain').remove(); xa.selectAll('text').attr('dy', '1.2em').style('font-weight', (n) => (n === F.m ? 700 : null)).style('fill', (n) => (n === F.m ? 'var(--fg)' : null));
+  const op = (n) => (F.m ? (n === F.m ? 1 : 0.28) : isPartial(n) ? 0.5 : 1);
+  const animate = !drawnOnce && !reduceMotion;
+  d3.stack().keys(keys)(rows).forEach((layer) => {
+    const rects = svg.append('g').style('fill', colorOf(layer.key)).selectAll('rect').data(layer).join('rect')
+      .attr('x', (d) => x(d.data.m)).attr('width', x.bandwidth()).style('opacity', (d) => op(d.data.m));
+    if (animate) rects.attr('y', y(0)).attr('height', 0).transition().duration(700).ease(d3.easeCubicOut).attr('y', (d) => y(d[1])).attr('height', (d) => Math.max(0, y(d[0]) - y(d[1])));
+    else rects.attr('y', (d) => y(d[1])).attr('height', (d) => Math.max(0, y(d[0]) - y(d[1])));
+  });
+  if (x.bandwidth() >= 24) svg.append('g').selectAll('text').data(rows.filter((d) => d.total > 0)).join('text').attr('class', 'tot').attr('text-anchor', 'middle')
+    .attr('x', (d) => x(d.m) + x.bandwidth() / 2).attr('y', (d) => y(d.total) - 6).style('opacity', (d) => (F.m && d.m !== F.m ? 0.45 : 1)).text((d) => short(d.total));
+  const tip = document.createElement('div'); tip.className = 'tip'; tip.hidden = true; el.append(tip);
+  const show = (ev, d) => {
+    const head = document.createElement('strong');
+    head.textContent = TH_FULL[d.m - 1] + (isPartial(d.m) ? ' (ยังไม่จบ)' : '') + ' · ฿' + money(d.total);
+    const lines = keys.filter((c) => d[c] > 0).map((c) => { const row = document.createElement('div'); const l = document.createElement('span'); l.textContent = c; const v = document.createElement('b'); v.textContent = money(d[c]); row.append(l, v); return row; });
+    const hint = document.createElement('div'); const hs = document.createElement('span'); hs.textContent = F.m === d.m ? 'กดอีกครั้งเพื่อดูทั้งปี' : 'กดเพื่อดูเฉพาะเดือนนี้'; hint.append(hs);
+    tip.replaceChildren(head, ...lines, hint); tip.hidden = false;
+    const box = el.getBoundingClientRect(), p = ev.touches ? ev.touches[0] : ev;
+    tip.style.left = Math.min(Math.max(0, p.clientX - box.left - tip.offsetWidth / 2), box.width - tip.offsetWidth) + 'px';
+    tip.style.top = Math.max(0, p.clientY - box.top - tip.offsetHeight - 14) + 'px';
+  };
+  svg.append('g').selectAll('rect').data(rows).join('rect')
+    .attr('x', (d) => x(d.m) - x.step() * x.paddingInner() / 2).attr('width', x.step()).attr('y', m.top).attr('height', H - m.top - m.bottom)
+    .style('fill', 'transparent').style('cursor', 'pointer')
+    .on('mousemove', show).on('mouseleave', () => { tip.hidden = true; })
+    .on('click', (ev, d) => { tip.hidden = true; setFilter({m: F.m === d.m ? 0 : d.m}); });
+}
+
+// ---------- สัดส่วน + ช่อง×เดือน ----------
+function renderShare() {
+  setText('d-period', periodName(F.m));
+  const pOk = byMonth(okRows(), F.m), grand = sum(pOk);
+  const data = base.order.map((c) => ({c, v: sum(byCh(pOk, c))})).sort((a, b) => b.v - a.v);
+  const el = $('donut'); el.replaceChildren();
+  const S = 170, R = S / 2;
+  const svg = d3.select(el).append('svg').attr('width', S).attr('height', S).attr('viewBox', `0 0 ${S} ${S}`).attr('role', 'img').attr('aria-label', 'แผนภูมิวงกลมสัดส่วนรายได้ตามช่อง');
+  const g = svg.append('g').attr('transform', `translate(${R},${R})`);
+  const pos = data.filter((d) => d.v > 0);
+  if (pos.length) {
+    g.selectAll('path').data(d3.pie().value((d) => d.v).sort(null).padAngle(0.015)(pos)).join('path')
+      .attr('d', d3.arc().innerRadius(R * 0.62).outerRadius(R).cornerRadius(3)).style('fill', (d) => colorOf(d.data.c))
+      .style('opacity', (d) => (F.c && F.c !== d.data.c ? 0.25 : 1)).style('cursor', 'pointer')
+      .on('click', (ev, d) => setFilter({c: F.c === d.data.c ? '' : d.data.c}));
+  } else {
+    g.append('circle').attr('r', R * 0.81).style('fill', 'none').style('stroke', 'var(--line)').style('stroke-width', R * 0.38);
+  }
+  const focus = F.c ? data.find((d) => d.c === F.c) : data[0];
+  g.append('text').attr('text-anchor', 'middle').attr('dy', '-0.2em').style('fill', 'var(--muted)').style('font-size', '12px').style('font-family', 'var(--font)').text(F.c ? 'ส่วนแบ่ง' : 'ช่องหลัก');
+  g.append('text').attr('text-anchor', 'middle').attr('dy', '1.1em').style('fill', 'var(--b)').style('font-size', '22px').style('font-weight', '700').style('font-family', 'var(--font)')
+    .text(focus && grand ? pct1(focus.v / grand * 100) : '—');
+  const tb = $('ranking'); tb.replaceChildren();
+  data.forEach((d) => {
+    const tr = tb.insertRow(); if (F.c === d.c) tr.className = 'sel';
+    whoCell(tr.insertCell(), d.c, true);
+    const a = tr.insertCell(); a.className = 'r'; a.textContent = money(d.v);
+    const s = tr.insertCell(); s.className = 'r'; s.textContent = grand ? pct1(d.v / grand * 100) : '–';
+  });
+}
+function renderHeat() {
+  const ok = okRows(), ms = monthList();
+  const head = $('heat-head'), body = $('heat-body');
+  head.replaceChildren(); body.replaceChildren();
+  const tr = document.createElement('tr');
+  const th0 = document.createElement('th'); th0.textContent = 'ช่อง'; tr.append(th0);
+  ms.forEach((m) => { const th = document.createElement('th'); th.className = 'r' + (F.m === m ? ' selcol' : ''); th.textContent = TH[m - 1]; tr.append(th); });
+  head.append(tr);
+  const vals = base.order.flatMap((c) => ms.map((m) => sum(byMonth(byCh(ok, c), m))));
+  const max = d3.max(vals) || 1;
+  base.order.forEach((c) => {
+    const row = body.insertRow(); if (F.c === c) row.className = 'sel';
+    whoCell(row.insertCell(), c, true);
+    ms.forEach((m) => {
+      const v = sum(byMonth(byCh(ok, c), m));
+      const td = row.insertCell();
+      td.className = 'cell' + (v ? '' : ' zero');
+      const a = v ? 0.12 + 0.78 * (v / max) : 0;
+      const on = (!F.m || F.m === m) && (!F.c || F.c === c);
+      td.style.background = v ? `rgba(24,119,242,${a.toFixed(2)})` : 'transparent';
+      td.style.opacity = on ? 1 : 0.35;
+      if (a > 0.55) td.style.color = '#fff';
+      td.textContent = v ? short(v) : '–';
+      td.title = c + ' · ' + TH_FULL[m - 1] + ' · ฿' + money(v) + ' (กดเพื่อกรอง)';
+      td.style.cursor = 'pointer';
+      td.addEventListener('click', () => setFilter(F.m === m && F.c === c ? {m: 0, c: ''} : {m, c}));
+    });
   });
 }
 
 document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => {
   sortKey = b.dataset.sort;
   document.querySelectorAll('.seg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
-  if (state) renderBoard();
+  if (base) renderBoard(channelStats());
 }));
 
 function renderAll() {
-  if (!state) return;
-  renderText(); renderSpark(); renderLegend(); renderStacked(); renderDonut(); renderRanking(); renderHeat();
-  state.stats = state.log ? channelStats() : [];
-  renderBoard(); renderChannelCards();
+  if (!base) return;
+  syncFilterUI();
+  renderKpis(); renderSpark(); renderInsights();
+  const stats = channelStats();
+  renderBoard(stats); renderChannelCards(stats);
+  renderLegend(); renderStacked(); renderShare(); renderHeat();
   drawnOnce = true;
 }
 
@@ -676,33 +816,38 @@ function renderAll() {
 let loading = false;
 async function load() {
   if (loading) return; loading = true;
-  if (state) setText('updated', 'กำลังอัปเดต…');
+  if (base) setText('updated', 'กำลังอัปเดต…');
   try {
-    if (CSV_URL.startsWith('PASTE_')) throw new Error('ยังไม่ได้ใส่ลิงก์ CSV ของชีตในไฟล์ index.html');
     const bust = (u) => u + (u.includes('?') ? '&' : '?') + '_=' + Date.now();
-    const [res, logText] = await Promise.all([
-      fetch(bust(CSV_URL), {cache: 'no-store'}),
-      fetch(bust(LOG_URL), {cache: 'no-store'}).then((r) => (r.ok ? r.text() : null)).catch(() => null)
-    ]);
-    if (!res.ok) throw new Error('Google ตอบกลับรหัส ' + res.status + ' — ตรวจว่าชีตยังแชร์แบบ "ทุกคนที่มีลิงก์ดูได้"');
-    const text = await res.text();
-    const data = readSheet(text);
-    let log = null;
-    try { log = logText ? readLog(logText) : null; } catch (e) { log = null; }
-    state = {...data, log, k: summarize(data)};
+    const [dRes, lRes] = await Promise.all([fetch(bust(CSV_URL), {cache: 'no-store'}), fetch(bust(LOG_URL), {cache: 'no-store'})]);
+    if (!dRes.ok || !lRes.ok) throw new Error('Google ตอบกลับรหัส ' + (dRes.ok ? lRes.status : dRes.status) + ' — ตรวจว่าชีตยังแชร์แบบ "ทุกคนที่มีลิงก์ดูได้"');
+    const dash = readDashboard(await dRes.text());
+    const log = readLog(await lRes.text());
+    const rows = log.filter((r) => r.y === dash.year);
+    const channels = [...new Set([...dash.channels, ...rows.map((r) => r.channel)])];
+    base = {year: dash.year, channels, rows};
+    buildColors();
+    // ตรวจยอดรวมกับแท็บแดชบอร์ด
+    const logTotal = sum(rows.filter((r) => r.status === 'สำเร็จ'));
+    const mm = $('mismatch');
+    if (Math.abs(logTotal - dash.sheetTotal) > 0.009) {
+      mm.hidden = false;
+      mm.textContent = 'หมายเหตุ: ยอดรวมจากรายการถอน (฿' + money(logTotal) + ') ไม่ตรงกับแท็บแดชบอร์ด (฿' + money(dash.sheetTotal) + ') อาจมีแถวที่กรอกวันที่ไม่ใช่รูปแบบ วัน/เดือน/ปี ค.ศ.';
+    } else mm.hidden = true;
     renderAll();
-    $('error').hidden = true;
-    $('dot').classList.remove('err');
+    $('error').hidden = true; $('dot').classList.remove('err');
     setText('updated', 'ข้อมูลสด · อัปเดต ' + new Date().toLocaleTimeString('th-TH', {hour: '2-digit', minute: '2-digit', second: '2-digit'}));
   } catch (e) {
     $('error').hidden = false;
-    setText('error-msg', e.message + (state ? ' · ตัวเลขที่เห็นเป็นข้อมูลรอบก่อน' : ''));
+    setText('error-msg', e.message + (base ? ' · ตัวเลขที่เห็นเป็นข้อมูลรอบก่อน' : ''));
     $('dot').classList.add('err');
-    setText('updated', state ? 'อัปเดตไม่สำเร็จ' : 'โหลดไม่สำเร็จ');
-    if (!state) { const s = $('stacked'); s.replaceChildren(); const d = document.createElement('div'); d.className = 'empty'; d.textContent = 'โหลดข้อมูลไม่สำเร็จ'; s.append(d); }
+    setText('updated', base ? 'อัปเดตไม่สำเร็จ' : 'โหลดไม่สำเร็จ');
+    if (!base) emptyBox($('stacked'), 'โหลดข้อมูลไม่สำเร็จ');
   } finally { loading = false; }
 }
 
+readHash();
+window.addEventListener('hashchange', () => { readHash(); renderAll(); });
 $('refresh').addEventListener('click', load);
 setInterval(() => { if (!document.hidden) load(); }, REFRESH_MS);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
