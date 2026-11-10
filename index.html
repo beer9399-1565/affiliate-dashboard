@@ -192,6 +192,9 @@ th.selcol { color: var(--b); }
 .gcell .amt { font-size: 12px; color: var(--muted); }
 .gcell .delta { font-size: 13px; }
 .gtable td.dimcol { opacity: .45; }
+#s-table td.neg { color: var(--bad); }
+#s-table td, #s-table th { white-space: nowrap; }
+#s-acct { margin-bottom: 14px; }
 .sharecell { display: flex; align-items: center; gap: 8px; }
 .sharecell .bar { flex: 1; }
 .sharecell .num { font-size: 12px; }
@@ -240,7 +243,7 @@ th.selcol { color: var(--b); }
 
   <section class="hero">
     <div class="card big">
-      <span class="label" id="k1-label">รายได้ถอนสำเร็จ</span>
+      <span class="label" id="k1-label">รายได้รวม</span>
       <span class="big-val">฿<span id="k1-val">—</span></span>
       <span class="foot" id="k1-foot">—</span>
       <div class="spark" id="spark"></div>
@@ -295,6 +298,23 @@ th.selcol { color: var(--b); }
     <div class="chgrid" id="chgrid"><div class="empty">กำลังโหลด…</div></div>
   </section>
 
+  <section class="card" id="shopee">
+    <div class="hrow">
+      <div><h2><span class="sw" style="background:#EE4D2D"></span> Shopee Affiliate</h2><p class="note" id="s-sub">—</p></div>
+      <a class="note" id="s-link" href="https://docs.google.com/spreadsheets/d/1qggrcuXwR1Ac3aionncQgcuCh2MWepmyBnCIYeRPGCY/edit" target="_blank" rel="noopener">เปิดชีต Shopee ↗</a>
+    </div>
+    <p class="warn" id="s-warn" hidden></p>
+    <div class="g-sum" id="s-kpi"><div class="empty">กำลังโหลด…</div></div>
+    <div class="g-sum" id="s-acct"></div>
+    <div class="tablewrap">
+      <table class="gtable" id="s-table">
+        <thead id="s-head"></thead>
+        <tbody id="s-body"></tbody>
+      </table>
+    </div>
+    <p class="note" style="margin-top:10px">แต่ละแท็บในชีต = 1 เดือน (รอบวันที่ 26 ของเดือนก่อน ถึงวันที่ 25) · ค่าคอมมิชชั่นของทุกบัญชีรวมกันนับเป็นรายได้ช่อง "Shopee" เดือนละ 1 ครั้ง · คงเหลือ = ค่าคอมมิชชั่น − ค่าแอด · ทุกยอดบวกจากรายวันทุกแถว</p>
+  </section>
+
   <section class="card">
     <div class="hrow">
       <h2>รายได้รายเดือน แยกตามช่อง</h2>
@@ -344,7 +364,7 @@ th.selcol { color: var(--b); }
     </section>
   </div>
 
-  <p class="pagefoot">ตัวเลขทั้งหมดคำนวณจากทุกแถวในแท็บ "บันทึกถอนเงิน" ตามวันที่ถอน และตรวจกับยอดรวมในแท็บ "แดชบอร์ด" ทุกครั้ง · เปลี่ยนปีได้ที่ช่องเลขปีในชีต · หน้านี้ดึงข้อมูลใหม่ทุกครั้งที่เปิด และทุก 1 นาทีขณะเปิดค้างไว้ (Google อาจใช้เวลาไม่กี่นาทีกว่าจะส่งตัวเลขใหม่หลังแก้ชีต)</p>
+  <p class="pagefoot">รายได้ช่องเพจคำนวณจากทุกแถวในแท็บ "บันทึกถอนเงิน" ตามวันที่ถอน และตรวจกับยอดรวมในแท็บ "แดชบอร์ด" ทุกครั้ง · ช่อง Shopee ใช้ค่าคอมมิชชั่นจากชีต Shopee Affiliate (แท็บรายเดือน) · เปลี่ยนปีได้ที่ช่องเลขปีในชีต · หน้านี้ดึงข้อมูลใหม่ทุกครั้งที่เปิด และทุก 1 นาทีขณะเปิดค้างไว้ (Google อาจใช้เวลาไม่กี่นาทีกว่าจะส่งตัวเลขใหม่หลังแก้ชีต)</p>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
@@ -354,6 +374,11 @@ const CSV_URL = 'https://docs.google.com/spreadsheets/d/12zBOjd2iWCW2toi937n0BQ9
 // แท็บ "บันทึกถอนเงิน": ทุกแถว ใช้คำนวณตัวเลขทั้งหน้า (กรองเดือน/ช่องได้)
 const LOG_URL = 'https://docs.google.com/spreadsheets/d/12zBOjd2iWCW2toi937n0BQ9gqA7bNFC8ahJWwyEfn_U/gviz/tq?tqx=out:csv&headers=0&sheet=' + encodeURIComponent('บันทึกถอนเงิน');
 const REFRESH_MS = 60000;
+// ชีต Shopee Affiliate: 1 แท็บต่อเดือน ชื่อ "affiliate <เดือน> <ปี พ.ศ. 2 หลัก>" (รายชื่อแท็บอ่านจากหน้า htmlview)
+const SHOPEE_ID = '1qggrcuXwR1Ac3aionncQgcuCh2MWepmyBnCIYeRPGCY';
+const SHOPEE_LIST_URL = 'https://docs.google.com/spreadsheets/d/' + SHOPEE_ID + '/htmlview';
+const shopeeTabUrl = (gid) => 'https://docs.google.com/spreadsheets/d/' + SHOPEE_ID + '/export?format=csv&gid=' + gid;
+const SHOPEE = 'Shopee', SHOPEE_COLOR = '#EE4D2D', SHOPEE_REFRESH_MS = 5 * 60000;
 
 const TH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 const TH_FULL = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
@@ -371,6 +396,7 @@ const sum = (rows) => Math.round(d3.sum(rows, (r) => r.amount) * 100) / 100;
 let base = null;           // ข้อมูลจากชีต
 let F = {m: 0, c: ''};     // ตัวกรอง: m = เดือน (0 = ทั้งปี), c = ช่อง ('' = ทุกช่อง)
 let sortKey = 'total', drawnOnce = false;
+let shopee = {months: [], at: 0, err: ''}; // ข้อมูล Shopee รายเดือน (โหลดใหม่ทุก 5 นาที)
 
 // ---------- อ่าน CSV ----------
 function parseCSV(text) {
@@ -416,6 +442,60 @@ function readLog(text) {
   return out;
 }
 
+// ---------- Shopee ----------
+function shopeeTabs(html) {
+  const out = [], re = /name:\s*"((?:[^"\\]|\\.)*)",\s*pageUrl:\s*"[^"]*?gid=(\d+)/g; let m;
+  while ((m = re.exec(html))) {
+    let name; try { name = JSON.parse('"' + m[1] + '"'); } catch (e) { name = m[1]; }
+    const t = name.trim().match(/^affiliate\s+(\S+)\s+(\d{2,4})$/i); if (!t) continue;
+    const mo = TH_FULL.indexOf(t[1]) + 1; if (!mo) continue;
+    let y = +t[2]; y = y < 100 ? y + 2500 - 543 : y > 2400 ? y - 543 : y;
+    out.push({name: name.trim(), gid: m[2], y, m: mo});
+  }
+  return out;
+}
+// แท็บ 1 เดือน: คอลัมน์ B–D ยอดขาย, F–H ค่าแอด, J–L ค่าคอมมิชชั่น (3 บัญชี) · บวกจากแถวรายวันเอง และจำยอดแถว "รวม" ในชีตไว้เทียบ
+function readShopeeTab(text, tab) {
+  const rows = parseCSV(text), head = rows[1] || [];
+  const accts = [1, 2, 3].map((i) => String(head[i] || '').trim() || 'บัญชี ' + i);
+  const z = () => [0, 0, 0];
+  const t = {sales: z(), ad: z(), com: z()}, sheet = {sales: z(), ad: z(), com: z()};
+  let days = 0, filled = 0, hasTotal = false;
+  rows.forEach((r) => {
+    const c0 = String(r[0] || '').trim();
+    const take = (o) => [0, 1, 2].forEach((i) => { o.sales[i] += num(r[1 + i]); o.ad[i] += num(r[5 + i]); o.com[i] += num(r[9 + i]); });
+    if (c0 === 'รวม' && !hasTotal) { hasTotal = true; take(sheet); return; }
+    if (!/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(c0)) return;
+    days++; if ([1, 2, 3, 5, 6, 7, 9, 10, 11].some((i) => num(r[i]))) filled = days;
+    take(t);
+  });
+  const r2 = (v) => Math.round(v * 100) / 100;
+  const tot = (a) => r2(d3.sum(a));
+  return {...tab, accts, sales: t.sales.map(r2), ad: t.ad.map(r2), com: t.com.map(r2), days, filled,
+    salesT: tot(t.sales), adT: tot(t.ad), comT: tot(t.com), net: r2(tot(t.com) - tot(t.ad)),
+    sheetCom: hasTotal ? tot(sheet.com) : null, sheetSales: hasTotal ? tot(sheet.sales) : null};
+}
+async function loadShopee(bust) {
+  if (shopee.at && Date.now() - shopee.at < SHOPEE_REFRESH_MS) return;
+  try {
+    const lr = await fetch(bust(SHOPEE_LIST_URL), {cache: 'no-store'});
+    if (!lr.ok) throw new Error('รหัส ' + lr.status);
+    const tabs = shopeeTabs(await lr.text());
+    if (!tabs.length) throw new Error('ไม่พบแท็บชื่อ "affiliate <เดือน> <ปี>"');
+    const months = await Promise.all(tabs.map(async (tab) => {
+      const r = await fetch(bust(shopeeTabUrl(tab.gid)), {cache: 'no-store'});
+      if (!r.ok) throw new Error('แท็บ ' + tab.name + ' รหัส ' + r.status);
+      return readShopeeTab(await r.text(), tab);
+    }));
+    shopee = {months: months.sort((a, b) => a.y - b.y || a.m - b.m), at: Date.now(), err: ''};
+  } catch (e) {
+    shopee = {...shopee, err: 'ดึงชีต Shopee ไม่สำเร็จ (' + e.message + ')' + (shopee.months.length ? ' · แสดงข้อมูลรอบก่อน' : ' — ตรวจว่าชีตแชร์แบบ "ทุกคนที่มีลิงก์ดูได้"')};
+  }
+}
+// 1 แท็บ = รายได้ 1 ครั้ง ลงวันที่ 25 (วันปิดรอบ)
+const shopeeRows = (year) => shopee.months.filter((s) => s.y === year && s.comT > 0)
+  .map((s) => ({channel: SHOPEE, amount: s.comT, y: s.y, m: s.m, d: 25, status: 'สำเร็จ', src: 'shopee'}));
+
 // ---------- ตัวช่วยคำนวณ ----------
 const now = () => new Date();
 const isCurYear = () => base && base.year === now().getFullYear();
@@ -426,7 +506,7 @@ const byMonth = (rows, m) => (m ? rows.filter((r) => r.m === m) : rows);
 const periodName = (m) => (m ? 'เดือน ' + TH[m - 1] + ' ' + base.year : 'ทั้งปี ' + base.year);
 const isPartial = (m) => isCurYear() && m === curNo();
 const fmtDay = (r) => r.d + ' ' + TH[r.m - 1];
-const daysAgo = (r) => { const n0 = now(); const t = new Date(r.y, r.m - 1, r.d); const n = Math.round((new Date(n0.getFullYear(), n0.getMonth(), n0.getDate()) - t) / 864e5); return n <= 0 ? 'วันนี้' : n === 1 ? 'เมื่อวาน' : n + ' วันก่อน'; };
+const daysAgo = (r) => { const n0 = now(); const t = new Date(r.y, r.m - 1, r.d); const n = Math.round((new Date(n0.getFullYear(), n0.getMonth(), n0.getDate()) - t) / 864e5); return n < 0 ? 'รอบยังไม่จบ' : n === 0 ? 'วันนี้' : n === 1 ? 'เมื่อวาน' : n + ' วันก่อน'; };
 const initial = (name) => name.replace(/^[เแโใไ]/, '').charAt(0) || '?';
 const latest = (rows) => rows.reduce((a, r) => (!a || r.m > a.m || (r.m === a.m && r.d > a.d) ? r : a), null);
 // เดือนที่แสดงในกราฟ: ตั้งแต่เดือนแรกที่มีรายได้ ถึงเดือนปัจจุบัน
@@ -456,7 +536,8 @@ let colorMap = {};
 function buildColors() {
   const ok = okRows();
   const order = base.channels.slice().sort((a, b) => sum(byCh(ok, b)) - sum(byCh(ok, a)));
-  colorMap = {}; order.forEach((c, i) => { colorMap[c] = PALETTE[i % PALETTE.length]; });
+  colorMap = {}; let k = 0;
+  order.forEach((c) => { colorMap[c] = c === SHOPEE ? SHOPEE_COLOR : PALETTE[k++ % PALETTE.length]; });
   base.order = order;
 }
 const colorOf = (c) => colorMap[c] || PALETTE[PALETTE.length - 1];
@@ -519,7 +600,7 @@ function renderKpis() {
   const total = sum(pOk);
   const chTxt = F.c ? ' · ' + F.c : '';
   setText('year', base.year);
-  setText('k1-label', 'รายได้ถอนสำเร็จ · ' + periodName(F.m) + chTxt + (isPartial(F.m) ? ' (ยังไม่จบเดือน)' : ''));
+  setText('k1-label', 'รายได้รวม · ' + periodName(F.m) + chTxt + (isPartial(F.m) ? ' (ยังไม่จบเดือน)' : ''));
   setText('k1-val', money(total));
   setText('k1-foot', int(pOk.length) + ' ครั้ง · ไม่สำเร็จ ฿' + money(sum(pAll.filter((r) => r.status === 'ไม่สำเร็จ'))) + ' · ยังไม่เลือกสถานะ ฿' + money(sum(pAll.filter((r) => r.status === 'รอ'))));
 
@@ -720,6 +801,71 @@ function renderChannelCards(stats) {
     }
   });
   if (!show.length) emptyBox(grid, 'ไม่มีข้อมูลช่องนี้');
+}
+
+// ---------- Shopee Affiliate ----------
+function renderShopee() {
+  const ys = shopee.months.filter((s) => s.y === base.year);
+  const sel = F.m ? ys.filter((s) => s.m === F.m) : ys;
+  setText('s-sub', (F.m ? 'เดือน ' + TH_FULL[F.m - 1] : 'ทั้งปี') + ' ' + base.year + ' · ' + ys.length + ' แท็บรายเดือนในชีต' +
+    (F.c && F.c !== SHOPEE ? ' · ส่วนนี้แสดงเฉพาะ Shopee เสมอ' : ''));
+  const msgs = [];
+  if (shopee.err) msgs.push(shopee.err);
+  const off = ys.filter((s) => s.sheetCom != null && Math.abs(s.sheetCom - s.comT) >= 1);
+  if (off.length) msgs.push('แถว "รวม" ในชีต Shopee ไม่เท่ากับผลบวกรายวัน ' + off.length + ' เดือน (' +
+    off.map((s) => TH[s.m - 1] + ' ขาด ฿' + money(s.comT - s.sheetCom)).join(', ') + ') — สูตรรวมในชีตข้ามไป 1 แถว หน้านี้ใช้ผลบวกรายวันทุกแถว');
+  $('s-warn').hidden = !msgs.length; $('s-warn').textContent = msgs.join(' · ');
+
+  const tot = (k) => Math.round(d3.sum(sel, (s) => s[k]) * 100) / 100;
+  const sales = tot('salesT'), com = tot('comT'), ad = tot('adT'), net = Math.round((com - ad) * 100) / 100;
+  const box = (title, val, sub, cls, color) => {
+    const d = document.createElement('div'); d.className = 'pod';
+    const t = document.createElement('span'); t.className = 'pod-sub'; if (color) t.append(swatch(color), ' '); t.append(title);
+    const v = document.createElement('span'); v.className = 'pod-val ' + (cls || ''); v.textContent = val;
+    const s = document.createElement('span'); s.className = 'pod-sub'; s.textContent = sub;
+    d.append(t, v, s); return d;
+  };
+  const kpi = $('s-kpi'), acct = $('s-acct');
+  if (!sel.length) {
+    emptyBox(kpi, shopee.err ? 'ยังโหลดชีต Shopee ไม่ได้' : 'ไม่มีแท็บ Shopee ของ' + periodName(F.m));
+    acct.replaceChildren();
+  } else {
+    kpi.replaceChildren(
+      box('ยอดขาย', '฿' + money(sales), sel.length + ' เดือน · ทุกบัญชีรวมกัน'),
+      box('ค่าคอมมิชชั่น (นับเป็นรายได้)', '฿' + money(com), sales ? 'คิดเป็น ' + pct1(com / sales * 100) + ' ของยอดขาย' : '—'),
+      box('ค่าแอด', '฿' + money(ad), ad ? 'คอมฯ ได้ ' + (com / ad).toFixed(1) + ' เท่าของค่าแอด' : 'ไม่มีค่าแอด'),
+      box('คงเหลือหลังหักแอด', '฿' + money(net), com ? pct1(net / com * 100) + ' ของค่าคอมมิชชั่น' : '—', 'delta ' + (net > 0 ? 'up' : net < 0 ? 'down' : 'flat'))
+    );
+    const names = (sel[0] || ys[0]).accts;
+    const aCols = ['#EE4D2D', '#F7B928', '#5B7083'];
+    acct.replaceChildren(...names.map((n, i) => {
+      const c = d3.sum(sel, (s) => s.com[i]), sa = d3.sum(sel, (s) => s.sales[i]), a = d3.sum(sel, (s) => s.ad[i]);
+      return box(n, c ? '฿' + money(c) : '–', c || sa ? 'ยอดขาย ฿' + short(sa) + ' · แอด ฿' + short(a) + ' · ' + pct1(com ? c / com * 100 : 0) + ' ของค่าคอมฯ' : 'ไม่มียอดในช่วงนี้', '', aCols[i]);
+    }));
+  }
+
+  const head = $('s-head'), body = $('s-body');
+  head.replaceChildren(); body.replaceChildren();
+  if (!ys.length) return;
+  const names = ys[ys.length - 1].accts;
+  const htr = document.createElement('tr');
+  ['เดือน', 'ยอดขาย', 'ค่าคอมฯ', 'ค่าแอด', 'คงเหลือ', 'คอมฯ/ยอดขาย', ...names.map((n) => 'คอมฯ ' + n)].forEach((h) => { const th = document.createElement('th'); th.textContent = h; htr.append(th); });
+  head.append(htr);
+  const addRow = (label, o, cls, m) => {
+    const tr = body.insertRow(); if (cls) tr.className = cls;
+    const td0 = tr.insertCell();
+    if (m) { const b = document.createElement('button'); b.type = 'button'; b.className = 'who linkish'; b.textContent = label; b.title = F.m === m ? 'ดูทั้งปี' : 'ดูเฉพาะเดือนนี้'; b.addEventListener('click', () => setFilter({m: F.m === m ? 0 : m})); td0.append(b); }
+    else td0.textContent = label;
+    const cell = (v, c) => { const td = tr.insertCell(); td.textContent = v; if (c) td.className = c; };
+    cell(money(o.sales)); cell(money(o.com)); cell(o.ad ? money(o.ad) : '–');
+    cell(money(o.com - o.ad), o.com - o.ad < 0 ? 'neg' : '');
+    cell(o.sales ? pct1(o.com / o.sales * 100) : '–');
+    o.acc.forEach((v) => cell(v ? money(v) : '–'));
+  };
+  ys.forEach((s) => addRow(TH_FULL[s.m - 1] + (s.filled < s.days ? ' (ยังไม่ครบรอบ)' : ''),
+    {sales: s.salesT, com: s.comT, ad: s.adT, acc: s.com}, F.m === s.m ? 'sel' : '', s.m));
+  addRow('รวมทั้งปี', {sales: d3.sum(ys, (s) => s.salesT), com: d3.sum(ys, (s) => s.comT), ad: d3.sum(ys, (s) => s.adT),
+    acc: names.map((n, i) => d3.sum(ys, (s) => s.com[i]))}, 'total');
 }
 
 // ---------- กราฟรายเดือน ----------
@@ -963,7 +1109,7 @@ function renderAll() {
   renderKpis(); renderSpark(); renderInsights();
   const stats = channelStats();
   renderBoard(stats); renderChannelCards(stats);
-  renderLegend(); renderStacked(); renderGrowth(); renderShare(); renderHeat();
+  renderShopee(); renderLegend(); renderStacked(); renderGrowth(); renderShare(); renderHeat();
   drawnOnce = true;
 }
 
@@ -978,12 +1124,14 @@ async function load() {
     if (!dRes.ok || !lRes.ok) throw new Error('Google ตอบกลับรหัส ' + (dRes.ok ? lRes.status : dRes.status) + ' — ตรวจว่าชีตยังแชร์แบบ "ทุกคนที่มีลิงก์ดูได้"');
     const dash = readDashboard(await dRes.text());
     const log = readLog(await lRes.text());
-    const rows = log.filter((r) => r.y === dash.year);
-    const channels = [...new Set([...dash.channels, ...rows.map((r) => r.channel)])];
+    await loadShopee(bust);
+    const logRows = log.filter((r) => r.y === dash.year);
+    const rows = [...logRows, ...shopeeRows(dash.year)];
+    const channels = [...new Set([...dash.channels, ...rows.map((r) => r.channel), ...(shopee.months.length ? [SHOPEE] : [])])];
     base = {year: dash.year, channels, rows};
     buildColors();
     // ตรวจยอดรวมกับแท็บแดชบอร์ด
-    const logTotal = sum(rows.filter((r) => r.status === 'สำเร็จ'));
+    const logTotal = sum(logRows.filter((r) => r.status === 'สำเร็จ'));
     const mm = $('mismatch');
     if (Math.abs(logTotal - dash.sheetTotal) > 0.009) {
       mm.hidden = false;
