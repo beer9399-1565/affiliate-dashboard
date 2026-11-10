@@ -195,6 +195,18 @@ th.selcol { color: var(--b); }
 #s-table td.neg { color: var(--bad); }
 #s-table td, #s-table th { white-space: nowrap; }
 #s-acct { margin-bottom: 14px; }
+[hidden] { display: none !important; }
+.zone-seg button { display: inline-flex; align-items: center; gap: 6px; }
+.pbar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--bg); margin-bottom: 14px; }
+.pbar i { display: block; height: 100%; }
+.platgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 12px; }
+.plat { appearance: none; text-align: left; font: inherit; color: inherit; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 6px; cursor: pointer; min-width: 0; }
+.plat:hover { border-color: var(--b); }
+.plat:focus-visible { outline: 2px solid var(--b); outline-offset: 1px; }
+.plat-name { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+.plat-val { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.plat-row { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--muted); }
+.plat-row b { color: var(--fg); font-weight: 600; text-align: right; }
 .sharecell { display: flex; align-items: center; gap: 8px; }
 .sharecell .bar { flex: 1; }
 .sharecell .num { font-size: 12px; }
@@ -216,6 +228,14 @@ th.selcol { color: var(--b); }
   </header>
 
   <section class="filters" id="filters" aria-label="ตัวกรอง">
+    <div class="f-group">
+      <span class="f-label" id="z-label">โซน</span>
+      <div class="seg zone-seg" role="group" aria-labelledby="z-label" id="z-seg">
+        <button type="button" data-z="" aria-pressed="true">ทั้งหมด</button>
+        <button type="button" data-z="tiktok" aria-pressed="false"><span class="sw" style="background:var(--fg)"></span> TikTok</button>
+        <button type="button" data-z="shopee" aria-pressed="false"><span class="sw" style="background:#EE4D2D"></span> Shopee</button>
+      </div>
+    </div>
     <div class="f-group">
       <label class="f-label" for="f-month">เดือน</label>
       <div class="f-month">
@@ -265,12 +285,18 @@ th.selcol { color: var(--b); }
     </div>
   </section>
 
+  <section class="card" id="platforms" data-zones="all">
+    <div class="hrow"><div><h2>TikTok กับ Shopee</h2><p class="note" id="p-sub">—</p></div><p class="note">กดการ์ดเพื่อเข้าโซนนั้น</p></div>
+    <div class="pbar" id="p-bar" aria-hidden="true"></div>
+    <div class="platgrid" id="p-grid"><div class="empty">กำลังโหลด…</div></div>
+  </section>
+
   <section class="card">
     <div class="hrow"><h2>ไฮไลต์</h2></div>
     <ul class="insights" id="insights"></ul>
   </section>
 
-  <section class="card" id="ranking-board">
+  <section class="card" id="ranking-board" data-zones="all tiktok">
     <div class="hrow">
       <div><h2>อันดับช่องที่รายได้ดี</h2><p class="note"><span id="r-period">—</span> · นับเฉพาะรายการที่ถอนสำเร็จ · กดเลือกเกณฑ์ที่ใช้จัดอันดับ</p></div>
       <div class="seg" role="group" aria-label="เกณฑ์จัดอันดับ">
@@ -290,7 +316,7 @@ th.selcol { color: var(--b); }
     <p class="note" style="margin-top:10px">* <span id="r-cmp">—</span> · กดชื่อช่องเพื่อกรองทั้งหน้า</p>
   </section>
 
-  <section class="card" id="channel-stats">
+  <section class="card" id="channel-stats" data-zones="all tiktok">
     <div class="hrow">
       <h2>สถิติแต่ละช่อง</h2>
       <p class="note"><span id="c-period">—</span> · กราฟเล็ก = รายได้รายเดือนของช่องนั้นทั้งปี</p>
@@ -298,7 +324,7 @@ th.selcol { color: var(--b); }
     <div class="chgrid" id="chgrid"><div class="empty">กำลังโหลด…</div></div>
   </section>
 
-  <section class="card" id="shopee">
+  <section class="card" id="shopee" data-zones="all shopee">
     <div class="hrow">
       <div><h2><span class="sw" style="background:#EE4D2D"></span> Shopee Affiliate</h2><p class="note" id="s-sub">—</p></div>
       <a class="note" id="s-link" href="https://docs.google.com/spreadsheets/d/1qggrcuXwR1Ac3aionncQgcuCh2MWepmyBnCIYeRPGCY/edit" target="_blank" rel="noopener">เปิดชีต Shopee ↗</a>
@@ -343,7 +369,7 @@ th.selcol { color: var(--b); }
     <p class="note" style="margin-top:10px" id="g-note">—</p>
   </section>
 
-  <div class="two">
+  <div class="two" data-zones="all tiktok">
     <section class="card">
       <div class="hrow"><h2>สัดส่วนรายได้ตามช่อง</h2><p class="note" id="d-period">—</p></div>
       <div class="donutwrap">
@@ -394,7 +420,11 @@ const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').match
 const sum = (rows) => Math.round(d3.sum(rows, (r) => r.amount) * 100) / 100;
 
 let base = null;           // ข้อมูลจากชีต
-let F = {m: 0, c: ''};     // ตัวกรอง: m = เดือน (0 = ทั้งปี), c = ช่อง ('' = ทุกช่อง)
+let F = {m: 0, c: '', z: ''}; // z = โซน ('' ทั้งหมด, 'tiktok', 'shopee')
+let full = null;            // ข้อมูลทุกแพลตฟอร์ม (base = เฉพาะโซนที่เลือก)
+const ZONES = {'': 'ทั้งหมด', tiktok: 'TikTok', shopee: 'Shopee'};
+const platOf = (r) => (r.src === 'shopee' ? 'shopee' : 'tiktok');
+const chPlat = (c) => (c === SHOPEE ? 'shopee' : 'tiktok');     // ตัวกรอง: m = เดือน (0 = ทั้งปี), c = ช่อง ('' = ทุกช่อง)
 let sortKey = 'total', drawnOnce = false;
 let shopee = {months: [], at: 0, err: ''}; // ข้อมูล Shopee รายเดือน (โหลดใหม่ทุก 5 นาที)
 
@@ -534,11 +564,15 @@ function growth(rows, cmp) {
 // สีประจำช่อง: เรียงตามรายได้ทั้งปี (ไม่เปลี่ยนตามตัวกรอง)
 let colorMap = {};
 function buildColors() {
-  const ok = okRows();
-  const order = base.channels.slice().sort((a, b) => sum(byCh(ok, b)) - sum(byCh(ok, a)));
+  const ok = full.rows.filter((r) => r.status === 'สำเร็จ');
+  const order = full.channels.slice().sort((a, b) => sum(byCh(ok, b)) - sum(byCh(ok, a)));
   colorMap = {}; let k = 0;
   order.forEach((c) => { colorMap[c] = c === SHOPEE ? SHOPEE_COLOR : PALETTE[k++ % PALETTE.length]; });
-  base.order = order;
+  full.order = order;
+}
+function applyZone() {
+  const channels = full.channels.filter((c) => !F.z || chPlat(c) === F.z);
+  base = {year: full.year, channels, rows: F.z ? full.rows.filter((r) => platOf(r) === F.z) : full.rows, order: full.order.filter((c) => channels.includes(c))};
 }
 const colorOf = (c) => colorMap[c] || PALETTE[PALETTE.length - 1];
 const swatch = (color) => { const s = document.createElement('span'); s.className = 'sw'; s.style.background = color; return s; };
@@ -559,11 +593,12 @@ const emptyBox = (el, text) => { const e = document.createElement('div'); e.clas
 // ---------- ตัวกรอง ----------
 function readHash() {
   const p = new URLSearchParams(location.hash.slice(1));
-  F = {m: +p.get('m') || 0, c: p.get('c') || ''};
+  const z = p.get('z') || '';
+  F = {m: +p.get('m') || 0, c: p.get('c') || '', z: z in ZONES ? z : ''};
 }
 function writeHash() {
   const p = new URLSearchParams();
-  if (F.m) p.set('m', F.m); if (F.c) p.set('c', F.c);
+  if (F.z) p.set('z', F.z); if (F.m) p.set('m', F.m); if (F.c) p.set('c', F.c);
   const h = p.toString();
   try { history.replaceState(null, '', h ? '#' + h : location.pathname + location.search); } catch (e) { /* ไม่เป็นไร */ }
 }
@@ -576,7 +611,7 @@ function syncFilterUI() {
   const ms = $('f-month'), cs = $('f-channel');
   const months = monthList();
   if (F.m && !months.includes(F.m)) F.m = 0;
-  if (F.c && !base.channels.includes(F.c) && !base.rows.some((r) => r.channel === F.c)) F.c = '';
+  if (F.c && !base.channels.includes(F.c)) F.c = '';
   ms.replaceChildren(new Option('ทั้งปี ' + base.year, '0'), ...months.map((m) => new Option(TH_FULL[m - 1] + (isPartial(m) ? ' (ยังไม่จบ)' : ''), String(m))));
   ms.value = String(F.m);
   cs.replaceChildren(new Option('ทุกช่อง', ''), ...base.order.map((c) => new Option(c, c)));
@@ -584,11 +619,14 @@ function syncFilterUI() {
   $('f-prev').disabled = F.m === 0 ? false : F.m <= months[0];
   $('f-next').disabled = F.m === 0 || F.m >= months[months.length - 1];
   $('f-clear').hidden = !F.m && !F.c;
-  setText('f-summary', periodName(F.m) + ' · ' + (F.c || 'ทุกช่อง'));
+  setText('f-summary', (F.z ? ZONES[F.z] + ' · ' : '') + periodName(F.m) + ' · ' + (F.c || 'ทุกช่อง'));
+  document.querySelectorAll('#z-seg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.z === F.z)));
+  document.querySelectorAll('[data-zones]').forEach((el) => { el.hidden = !el.dataset.zones.split(' ').includes(F.z || 'all'); });
 }
 $('f-month').addEventListener('change', (e) => setFilter({m: +e.target.value}));
 $('f-channel').addEventListener('change', (e) => setFilter({c: e.target.value}));
 $('f-clear').addEventListener('click', () => setFilter({m: 0, c: ''}));
+document.querySelectorAll('#z-seg button').forEach((b) => b.addEventListener('click', () => setFilter({z: b.dataset.z, c: ''})));
 $('f-prev').addEventListener('click', () => { const ms = monthList(); setFilter({m: F.m ? Math.max(ms[0], F.m - 1) : ms[ms.length - 1]}); });
 $('f-next').addEventListener('click', () => { const ms = monthList(); if (F.m) setFilter({m: Math.min(ms[ms.length - 1], F.m + 1)}); });
 
@@ -600,7 +638,7 @@ function renderKpis() {
   const total = sum(pOk);
   const chTxt = F.c ? ' · ' + F.c : '';
   setText('year', base.year);
-  setText('k1-label', 'รายได้รวม · ' + periodName(F.m) + chTxt + (isPartial(F.m) ? ' (ยังไม่จบเดือน)' : ''));
+  setText('k1-label', (F.z ? 'รายได้ ' + ZONES[F.z] : 'รายได้รวม') + ' · ' + periodName(F.m) + chTxt + (isPartial(F.m) ? ' (ยังไม่จบเดือน)' : ''));
   setText('k1-val', money(total));
   setText('k1-foot', int(pOk.length) + ' ครั้ง · ไม่สำเร็จ ฿' + money(sum(pAll.filter((r) => r.status === 'ไม่สำเร็จ'))) + ' · ยังไม่เลือกสถานะ ฿' + money(sum(pAll.filter((r) => r.status === 'รอ'))));
 
@@ -652,6 +690,34 @@ function renderSpark() {
     .attr('y', (d) => (d.v ? y(d.v) : H - 3)).attr('height', (d) => (d.v ? H - 2 - y(d.v) : 1))
     .style('fill', F.c ? colorOf(F.c) : 'var(--b)')
     .style('opacity', (d) => (F.m ? (d.m === F.m ? 1 : 0.25) : isPartial(d.m) ? 0.45 : 0.85));
+}
+
+// ---------- TikTok กับ Shopee (เฉพาะโซนทั้งหมด) ----------
+function renderPlatforms() {
+  if (F.z) return;
+  const ok = okRows(), pOk = byMonth(ok, F.m), grand = sum(pOk), cmp = compareInfo();
+  setText('p-sub', periodName(F.m) + ' · ' + (F.c ? 'ตอนนี้กรองช่อง ' + F.c + ' อยู่ การ์ดนี้แสดงทุกช่อง' : 'ทุกช่อง'));
+  const P = [{z: 'tiktok', name: 'TikTok', color: 'var(--fg)'}, {z: 'shopee', name: 'Shopee', color: SHOPEE_COLOR}].map((p) => {
+    const rs = pOk.filter((r) => platOf(r) === p.z), yr = ok.filter((r) => platOf(r) === p.z);
+    const byM = d3.rollup(yr, (v) => d3.sum(v, (r) => r.amount), (r) => r.m);
+    const best = [...byM.entries()].sort((a, b) => b[1] - a[1])[0];
+    return {...p, total: sum(rs), share: grand ? sum(rs) / grand * 100 : 0, g: growth(yr, cmp), best,
+      chans: base.order.filter((c) => chPlat(c) === p.z && sum(byCh(rs, c)) > 0).length, allChans: base.order.filter((c) => chPlat(c) === p.z).length};
+  });
+  $('p-bar').replaceChildren(...P.filter((p) => p.total > 0).map((p) => { const i = document.createElement('i'); i.style.width = p.share + '%'; i.style.background = p.color; i.title = p.name + ' ' + pct1(p.share); return i; }));
+  $('p-grid').replaceChildren(...P.map((p) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'plat'; b.setAttribute('aria-label', 'เข้าโซน ' + p.name);
+    b.addEventListener('click', () => setFilter({z: p.z, c: ''}));
+    const nm = document.createElement('span'); nm.className = 'plat-name'; nm.append(swatch(p.color), p.name);
+    const v = document.createElement('span'); v.className = 'plat-val'; v.textContent = '฿' + money(p.total);
+    const row = (k, val) => { const r = document.createElement('span'); r.className = 'plat-row'; const a = document.createElement('span'); a.textContent = k; const c = document.createElement('b'); if (val instanceof Node) c.append(val); else c.textContent = val; r.append(a, c); return r; };
+    b.append(nm, v,
+      row('สัดส่วนของรายได้รวม', pct1(p.share)),
+      row(TH[cmp.T - 1] + (cmp.P >= 1 ? ' เทียบ ' + TH[cmp.P - 1] : '') + (p.z === 'shopee' && cmp.partial ? ' (นับเมื่อปิดรอบ 25)' : ''), deltaEl(p.g.delta, p.g.cur)),
+      row('เดือนที่ดีที่สุด', p.best ? TH[p.best[0] - 1] + ' · ฿' + short(p.best[1]) : '–'),
+      row(p.z === 'shopee' ? 'บัญชี' : 'ช่องที่มีรายได้', p.z === 'shopee' ? String(new Set(shopee.months.flatMap((s) => s.accts)).size) + ' บัญชี' : p.chans + ' จาก ' + p.allChans + ' ช่อง'));
+    return b;
+  }));
 }
 
 // ---------- ไฮไลต์ ----------
@@ -1104,9 +1170,10 @@ document.querySelectorAll('#ranking-board .seg button').forEach((b) => b.addEven
 }));
 
 function renderAll() {
-  if (!base) return;
+  if (!full) return;
+  applyZone();
   syncFilterUI();
-  renderKpis(); renderSpark(); renderInsights();
+  renderKpis(); renderSpark(); renderPlatforms(); renderInsights();
   const stats = channelStats();
   renderBoard(stats); renderChannelCards(stats);
   renderShopee(); renderLegend(); renderStacked(); renderGrowth(); renderShare(); renderHeat();
@@ -1117,7 +1184,7 @@ function renderAll() {
 let loading = false;
 async function load() {
   if (loading) return; loading = true;
-  if (base) setText('updated', 'กำลังอัปเดต…');
+  if (full) setText('updated', 'กำลังอัปเดต…');
   try {
     const bust = (u) => u + (u.includes('?') ? '&' : '?') + '_=' + Date.now();
     const [dRes, lRes] = await Promise.all([fetch(bust(CSV_URL), {cache: 'no-store'}), fetch(bust(LOG_URL), {cache: 'no-store'})]);
@@ -1128,7 +1195,7 @@ async function load() {
     const logRows = log.filter((r) => r.y === dash.year);
     const rows = [...logRows, ...shopeeRows(dash.year)];
     const channels = [...new Set([...dash.channels, ...rows.map((r) => r.channel), ...(shopee.months.length ? [SHOPEE] : [])])];
-    base = {year: dash.year, channels, rows};
+    full = {year: dash.year, channels, rows};
     buildColors();
     // ตรวจยอดรวมกับแท็บแดชบอร์ด
     const logTotal = sum(logRows.filter((r) => r.status === 'สำเร็จ'));
@@ -1142,10 +1209,10 @@ async function load() {
     setText('updated', 'ข้อมูลสด · อัปเดต ' + new Date().toLocaleTimeString('th-TH', {hour: '2-digit', minute: '2-digit', second: '2-digit'}));
   } catch (e) {
     $('error').hidden = false;
-    setText('error-msg', e.message + (base ? ' · ตัวเลขที่เห็นเป็นข้อมูลรอบก่อน' : ''));
+    setText('error-msg', e.message + (full ? ' · ตัวเลขที่เห็นเป็นข้อมูลรอบก่อน' : ''));
     $('dot').classList.add('err');
-    setText('updated', base ? 'อัปเดตไม่สำเร็จ' : 'โหลดไม่สำเร็จ');
-    if (!base) emptyBox($('stacked'), 'โหลดข้อมูลไม่สำเร็จ');
+    setText('updated', full ? 'อัปเดตไม่สำเร็จ' : 'โหลดไม่สำเร็จ');
+    if (!full) emptyBox($('stacked'), 'โหลดข้อมูลไม่สำเร็จ');
   } finally { loading = false; }
 }
 
