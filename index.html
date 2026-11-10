@@ -177,6 +177,21 @@ th.selcol { color: var(--b); }
 .chcard.clickable { cursor: pointer; transition: border-color .15s; }
 .chcard.clickable:hover { border-color: var(--b); }
 .chcard.clickable:focus-visible { outline: 2px solid var(--b); outline-offset: 2px; }
+/* การเติบโต */
+.g-sum { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 12px; margin-bottom: 12px; }
+.g-sum .pod { gap: 2px; }
+.gchart { min-height: 240px; }
+.gchart .zero { stroke: var(--axis); }
+.gchart .glabel { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; font-family: var(--font); }
+.gtable td, .gtable th { text-align: right; }
+.gtable td:first-child, .gtable th:first-child { text-align: left; position: sticky; left: 0; background: var(--panel); z-index: 1; }
+.gtable tr.total td { font-weight: 700; border-top: 2px solid var(--line); }
+.gtable tr.sel td { background: var(--b-soft); }
+.gtable th.selcol { color: var(--b); }
+.gcell { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; line-height: 1.25; }
+.gcell .amt { font-size: 12px; color: var(--muted); }
+.gcell .delta { font-size: 13px; }
+.gtable td.dimcol { opacity: .45; }
 .sharecell { display: flex; align-items: center; gap: 8px; }
 .sharecell .bar { flex: 1; }
 .sharecell .num { font-size: 12px; }
@@ -287,6 +302,25 @@ th.selcol { color: var(--b); }
     </div>
     <ul class="legend" id="legend"></ul>
     <div class="chart" id="stacked"><div class="empty">กำลังโหลด…</div></div>
+  </section>
+
+  <section class="card" id="growth">
+    <div class="hrow">
+      <div><h2>การเติบโต</h2><p class="note" id="g-sub">—</p></div>
+      <div class="seg" role="group" aria-label="ช่วงเวลาที่เทียบ" id="g-seg">
+        <button type="button" data-g="month" aria-pressed="true">รายเดือน</button>
+        <button type="button" data-g="quarter" aria-pressed="false">รายไตรมาส</button>
+      </div>
+    </div>
+    <div class="g-sum" id="g-sum"></div>
+    <div class="chart gchart" id="g-chart"><div class="empty">กำลังโหลด…</div></div>
+    <div class="tablewrap">
+      <table class="gtable">
+        <thead id="g-head"></thead>
+        <tbody id="g-body"></tbody>
+      </table>
+    </div>
+    <p class="note" style="margin-top:10px" id="g-note">—</p>
   </section>
 
   <div class="two">
@@ -796,9 +830,130 @@ function renderHeat() {
   });
 }
 
-document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => {
+// ---------- การเติบโต (รายเดือน / รายไตรมาส) ----------
+let gMode = 'month';
+const QN = (m) => Math.ceil(m / 3);
+// ช่วงที่แสดง: [{key, label, months:[...], partial}]
+function periods(mode) {
+  const ms = monthList();
+  if (mode === 'month') return ms.map((m) => ({key: m, label: TH[m - 1], months: [m], partial: isPartial(m)}));
+  const qs = [...new Set(ms.map(QN))];
+  return qs.map((q) => ({key: q, label: 'Q' + q, months: [q * 3 - 2, q * 3 - 1, q * 3], partial: isCurYear() && QN(curNo()) === q}));
+}
+// ยอดของช่วง p และช่วงก่อนหน้า (ถ้าช่วงยังไม่จบ เทียบระยะเวลาเท่ากันของช่วงก่อน)
+function periodGrowth(rows, p, mode) {
+  const span = mode === 'month' ? 1 : 3;
+  const start = p.months[0], prevStart = start - span;
+  const day = now().getDate(), pos = curNo() - start; // ตำแหน่งเดือนปัจจุบันในช่วง
+  const inCur = (r) => r.m >= start && r.m < start + span;
+  const inPrev = (r) => r.m >= prevStart && r.m < start;
+  const toDate = (r, s) => !p.partial || (r.m - s < pos) || (r.m - s === pos && r.d <= day);
+  const cur = sum(rows.filter((r) => inCur(r) && toDate(r, start)));
+  const prev = prevStart >= 1 ? sum(rows.filter((r) => inPrev(r) && toDate(r, prevStart))) : 0;
+  const full = sum(rows.filter(inCur));
+  return {cur, prev, full, delta: prev ? (cur / prev - 1) * 100 : null, isNew: !prev && cur > 0};
+}
+function renderGrowth() {
+  const ok = okRows(), ps = periods(gMode);
+  const unit = gMode === 'month' ? 'เดือน' : 'ไตรมาส';
+  const scopeRows = byCh(ok, F.c);
+  const series = ps.map((p) => ({...p, ...periodGrowth(scopeRows, p, gMode)}));
+  const selKey = F.m ? (gMode === 'month' ? F.m : QN(F.m)) : null;
+  setText('g-sub', 'เทียบกับ' + unit + 'ก่อนหน้า · ' + (F.c || 'ทุกช่องรวมกัน') + ' · ปี ' + base.year);
+
+  // สรุป: โตเร็วสุด / ลดลงมากสุด / ล่าสุด
+  const valid = series.filter((s) => s.delta != null);
+  const best = valid.slice().sort((a, b) => b.delta - a.delta)[0];
+  const worst = valid.slice().sort((a, b) => a.delta - b.delta)[0];
+  const lastS = series[series.length - 1];
+  const avgG = valid.length ? d3.mean(valid.filter((s) => !s.partial).map((s) => s.delta)) : null;
+  const box = (title, val, sub, cls) => {
+    const d = document.createElement('div'); d.className = 'pod';
+    const t = document.createElement('span'); t.className = 'pod-sub'; t.textContent = title;
+    const v = document.createElement('span'); v.className = 'pod-val ' + (cls || ''); v.textContent = val;
+    const s = document.createElement('span'); s.className = 'pod-sub'; s.textContent = sub;
+    d.append(t, v, s); return d;
+  };
+  const sgn = (x) => (x > 0 ? '+' : '') + pct1(x);
+  const cls = (x) => 'delta ' + (x > 0.05 ? 'up' : x < -0.05 ? 'down' : 'flat');
+  $('g-sum').replaceChildren(
+    box(unit + 'ล่าสุด · ' + (lastS ? lastS.label : '—') + (lastS && lastS.partial ? ' (ยังไม่จบ)' : ''), lastS && lastS.delta != null ? sgn(lastS.delta) : (lastS && lastS.isNew ? 'ใหม่' : '—'), lastS ? '฿' + money(lastS.cur) + ' เทียบ ฿' + money(lastS.prev) : '', lastS && lastS.delta != null ? cls(lastS.delta) : ''),
+    box('โตเร็วที่สุด', best ? sgn(best.delta) : '—', best ? best.label + (best.partial ? ' (ยังไม่จบ)' : '') + ' · ฿' + money(best.cur) : 'ยังมีข้อมูลไม่พอ', best ? cls(best.delta) : ''),
+    box('ลดลงมากที่สุด', worst && worst.delta < 0 ? sgn(worst.delta) : '—', worst && worst.delta < 0 ? worst.label + (worst.partial ? ' (ยังไม่จบ)' : '') + ' · ฿' + money(worst.cur) : 'ไม่มี' + unit + 'ที่ลดลง', worst && worst.delta < 0 ? cls(worst.delta) : ''),
+    box('เติบโตเฉลี่ยต่อ' + unit, avgG != null && isFinite(avgG) ? sgn(avgG) : '—', 'เฉลี่ยจาก' + unit + 'ที่จบแล้ว', avgG != null && isFinite(avgG) ? cls(avgG) : '')
+  );
+
+  // กราฟแท่ง % บวก/ลบ
+  const el = $('g-chart'); el.replaceChildren();
+  const data = series.filter((s) => s.delta != null);
+  if (!data.length) emptyBox(el, 'ต้องมีอย่างน้อย 2 ' + unit + 'ที่มีรายได้จึงจะเทียบการเติบโตได้');
+  else {
+    const W = Math.max(300, el.clientWidth || 600), H = 240, m = {top: 24, right: 8, bottom: 28, left: 46};
+    const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('height', H).attr('role', 'img').attr('aria-label', 'กราฟเปอร์เซ็นต์การเติบโตเทียบ' + unit + 'ก่อนหน้า');
+    const ext = d3.extent(data, (d) => d.delta);
+    const y = d3.scaleLinear().domain([Math.min(0, ext[0]), Math.max(0, ext[1])]).nice().range([H - m.bottom, m.top]);
+    const x = d3.scaleBand().domain(series.map((s) => s.key)).range([m.left, W - m.right]).padding(0.35);
+    svg.append('g').attr('class', 'grid').attr('transform', `translate(${m.left},0)`).call(d3.axisLeft(y).ticks(5).tickSize(-(W - m.left - m.right)).tickFormat(''));
+    svg.append('g').attr('class', 'axis').attr('transform', `translate(${m.left},0)`).call(d3.axisLeft(y).ticks(5).tickFormat((v) => v + '%').tickSize(0)).call((g) => g.select('.domain').remove()).selectAll('text').attr('dx', '-6');
+    const xa = svg.append('g').attr('class', 'axis').attr('transform', `translate(0,${H - m.bottom})`).call(d3.axisBottom(x).tickSize(0).tickFormat((k) => series.find((s) => s.key === k).label));
+    xa.select('.domain').remove(); xa.selectAll('text').attr('dy', '1.2em').style('font-weight', (k) => (k === selKey ? 700 : null));
+    svg.append('line').attr('class', 'zero').attr('x1', m.left).attr('x2', W - m.right).attr('y1', y(0)).attr('y2', y(0));
+    const col = (d) => (d.delta >= 0 ? 'var(--ok)' : 'var(--bad)');
+    svg.append('g').selectAll('rect').data(data).join('rect')
+      .attr('x', (d) => x(d.key)).attr('width', x.bandwidth()).attr('rx', 3)
+      .attr('y', (d) => y(Math.max(0, d.delta))).attr('height', (d) => Math.max(1, Math.abs(y(d.delta) - y(0))))
+      .style('fill', col).style('opacity', (d) => (selKey ? (d.key === selKey ? 1 : 0.3) : d.partial ? 0.5 : 0.9))
+      .append('title').text((d) => d.label + ': ' + sgn(d.delta) + ' (฿' + money(d.cur) + ' เทียบ ฿' + money(d.prev) + ')' + (d.partial ? ' · ยังไม่จบ เทียบช่วงเวลาเท่ากัน' : ''));
+    svg.append('g').selectAll('text').data(data).join('text').attr('class', 'glabel').attr('text-anchor', 'middle')
+      .attr('x', (d) => x(d.key) + x.bandwidth() / 2).attr('y', (d) => (d.delta >= 0 ? y(d.delta) - 6 : y(d.delta) + 14))
+      .style('fill', col).text((d) => sgn(d.delta));
+    series.filter((s) => s.delta == null && s.isNew).forEach((s) => {
+      svg.append('text').attr('class', 'glabel').attr('text-anchor', 'middle').attr('x', x(s.key) + x.bandwidth() / 2).attr('y', y(0) - 6).style('fill', 'var(--muted)').text('เริ่ม');
+    });
+  }
+
+  // ตาราง: แถว = รวม + แต่ละช่อง, คอลัมน์ = ช่วงเวลา
+  const head = $('g-head'), body = $('g-body');
+  head.replaceChildren(); body.replaceChildren();
+  const htr = document.createElement('tr');
+  const h0 = document.createElement('th'); h0.textContent = 'ช่อง'; htr.append(h0);
+  ps.forEach((p) => { const th = document.createElement('th'); th.textContent = p.label + (p.partial ? '*' : ''); if (p.key === selKey) th.className = 'selcol'; htr.append(th); });
+  head.append(htr);
+  const addRow = (name, rows, isTotal) => {
+    const tr = body.insertRow();
+    if (isTotal) tr.className = 'total'; else if (F.c === name) tr.className = 'sel';
+    const td0 = tr.insertCell();
+    if (isTotal) td0.textContent = 'รวมทุกช่อง'; else whoCell(td0, name, true);
+    ps.forEach((p) => {
+      const g = periodGrowth(rows, p, gMode);
+      const td = tr.insertCell(); if (selKey && p.key !== selKey) td.className = 'dimcol';
+      const c = document.createElement('div'); c.className = 'gcell';
+      c.append(deltaEl(g.delta, g.cur));
+      const a = document.createElement('span'); a.className = 'amt'; a.textContent = g.full ? short(g.full) : '–';
+      c.append(a); td.append(c);
+      td.title = (isTotal ? 'รวมทุกช่อง' : name) + ' · ' + p.label + ': ฿' + money(g.full) + (g.delta != null ? ' · ' + sgn(g.delta) + ' เทียบ' + unit + 'ก่อน' : '');
+    });
+  };
+  addRow('', ok, true);
+  base.order.forEach((c) => addRow(c, byCh(ok, c), false));
+  const partial = ps.find((p) => p.partial);
+  // ไตรมาสแรกที่มีรายได้ไม่เต็มไตรมาส → % ของไตรมาสถัดไปจะสูงเกินจริง
+  const firstM = ok.length ? d3.min(ok, (r) => r.m) : null;
+  const shortFirst = gMode === 'quarter' && firstM && (firstM - 1) % 3 !== 0 && ps.length > 1
+    ? ' · หมายเหตุ: Q' + QN(firstM) + ' เริ่มมีรายได้เดือน ' + TH[firstM - 1] + ' จึงมีรายได้ไม่เต็มไตรมาส % ของ Q' + (QN(firstM) + 1) + ' จึงดูสูงกว่าการเติบโตจริง' : '';
+  setText('g-note', 'ตัวบน = % เทียบ' + unit + 'ก่อนหน้า · ตัวล่าง = ยอดของ' + unit + 'นั้น · "ใหม่" = ' + unit + 'ก่อนหน้าไม่มียอด' +
+    (partial ? ' · * ' + partial.label + ' ยังไม่จบ เทียบกับช่วงเวลาเท่ากันของ' + unit + 'ก่อนหน้า (ถึงวันที่ ' + now().getDate() + ' ' + TH[curNo() - 1] + ')' : '') +
+    (gMode === 'quarter' ? ' · Q1 = ม.ค.–มี.ค., Q2 = เม.ย.–มิ.ย., Q3 = ก.ค.–ก.ย., Q4 = ต.ค.–ธ.ค.' : '') + shortFirst);
+}
+document.querySelectorAll('#g-seg button').forEach((b) => b.addEventListener('click', () => {
+  gMode = b.dataset.g;
+  document.querySelectorAll('#g-seg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  if (base) renderGrowth();
+}));
+
+document.querySelectorAll('#ranking-board .seg button').forEach((b) => b.addEventListener('click', () => {
   sortKey = b.dataset.sort;
-  document.querySelectorAll('.seg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  document.querySelectorAll('#ranking-board .seg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
   if (base) renderBoard(channelStats());
 }));
 
@@ -808,7 +963,7 @@ function renderAll() {
   renderKpis(); renderSpark(); renderInsights();
   const stats = channelStats();
   renderBoard(stats); renderChannelCards(stats);
-  renderLegend(); renderStacked(); renderShare(); renderHeat();
+  renderLegend(); renderStacked(); renderGrowth(); renderShare(); renderHeat();
   drawnOnce = true;
 }
 
