@@ -107,6 +107,44 @@ tr:last-child td { border-bottom: 0; }
 .heat td.cell { text-align: right; border-radius: 6px; border-bottom: 2px solid var(--panel); border-left: 2px solid var(--panel); font-size: 12px; }
 .heat td.cell.zero { color: var(--muted); }
 .pagefoot { font-size: 12px; color: var(--muted); line-height: 1.6; margin: 0; }
+/* อันดับช่อง */
+.seg { display: inline-flex; flex-wrap: wrap; gap: 4px; background: var(--bg); border-radius: 10px; padding: 4px; }
+.seg button { appearance: none; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 7px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--panel); color: var(--b); box-shadow: var(--shadow); }
+.seg button:focus-visible { outline: 2px solid var(--b); outline-offset: 1px; }
+.podium { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+@media (max-width: 560px) { .podium { grid-template-columns: 1fr; } }
+.podium .empty { grid-column: 1 / -1; min-height: 80px; }
+.pod { border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.pod.p1 { border-color: color-mix(in srgb, #F7B928 60%, var(--line)); background: color-mix(in srgb, #F7B928 8%, var(--panel)); }
+.pod-rank { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+.medal { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; color: #fff; flex: none; }
+.pod-name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pod-val { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pod-sub { font-size: 12px; color: var(--muted); }
+.rankno { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--b-soft); color: var(--b); font-size: 12px; font-weight: 700; }
+.bar { height: 8px; border-radius: 4px; background: var(--b-soft); min-width: 70px; overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 4px; }
+.delta { font-weight: 700; font-variant-numeric: tabular-nums; }
+.delta.up { color: var(--ok); } .delta.down { color: var(--bad); } .delta.flat { color: var(--muted); }
+.lead td { white-space: nowrap; }
+.lead tr.sel td { background: var(--b-soft); }
+
+/* การ์ดสถิติแต่ละช่อง */
+.chgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)); gap: 16px; }
+.chcard { display: flex; flex-direction: column; gap: 12px; }
+.chhead { display: flex; align-items: center; gap: 10px; }
+.av { width: 40px; height: 40px; border-radius: 50%; color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 17px; flex: none; }
+.chname { font-weight: 700; font-size: 16px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chmeta { font-size: 12px; color: var(--muted); }
+.chtotal { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; margin: 0; }
+.stats div { min-width: 0; }
+.stats dt { font-size: 12px; color: var(--muted); }
+.stats dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.chspark svg { display: block; width: 100%; height: 44px; }
+.chcard.idle { opacity: .75; }
+.badge { margin-left: auto; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 10px; background: var(--b-soft); color: var(--b); white-space: nowrap; }
 .err-box { background: color-mix(in srgb, var(--bad) 10%, var(--panel)); border-color: color-mix(in srgb, var(--bad) 40%, var(--line)); }
 .loading .val-slot { color: var(--muted); }
 </style>
@@ -165,6 +203,34 @@ tr:last-child td { border-bottom: 0; }
     </ul>
   </section>
 
+  <section class="card" id="ranking-board">
+    <div class="hrow">
+      <div><h2>อันดับช่องที่รายได้ดี</h2><p class="note">ปี <span id="r-year">—</span> · นับเฉพาะรายการที่ถอนสำเร็จ · กดเลือกเกณฑ์ที่ใช้จัดอันดับ</p></div>
+      <div class="seg" role="group" aria-label="เกณฑ์จัดอันดับ">
+        <button type="button" data-sort="total" aria-pressed="true">รายได้รวม</button>
+        <button type="button" data-sort="month" aria-pressed="false">เดือนนี้</button>
+        <button type="button" data-sort="avg" aria-pressed="false">เฉลี่ยต่อครั้ง</button>
+        <button type="button" data-sort="count" aria-pressed="false">จำนวนครั้ง</button>
+      </div>
+    </div>
+    <div class="podium" id="podium"><div class="empty">กำลังโหลด…</div></div>
+    <div class="tablewrap">
+      <table class="lead">
+        <thead><tr><th>#</th><th>ช่อง</th><th class="r">รายได้รวม (บาท)</th><th>สัดส่วน</th><th class="r">ครั้ง</th><th class="r">เฉลี่ย/ครั้ง</th><th class="r">เดือนนี้</th><th class="r">เทียบเดือนก่อน*</th><th class="r">ถอนล่าสุด</th></tr></thead>
+        <tbody id="lead-body"></tbody>
+      </table>
+    </div>
+    <p class="note" style="margin-top:10px">* เทียบเดือนนี้กับเดือนก่อนในช่วงวันที่เดียวกัน (เช่น 1–10 พ.ย. เทียบ 1–10 ต.ค.)</p>
+  </section>
+
+  <section class="card" id="channel-stats">
+    <div class="hrow">
+      <h2>สถิติแต่ละช่อง</h2>
+      <p class="note">เรียงตามรายได้รวม · กราฟเล็ก = รายได้รายเดือนของช่องนั้น</p>
+    </div>
+    <div class="chgrid" id="chgrid"><div class="empty">กำลังโหลด…</div></div>
+  </section>
+
   <section class="card">
     <div class="hrow">
       <h2>รายได้รายเดือน แยกตามช่อง</h2>
@@ -202,6 +268,8 @@ tr:last-child td { border-bottom: 0; }
 <script>
 // ลิงก์ CSV ของแท็บ "แดชบอร์ด" (gid=220672209) — ชีตแชร์แบบ "ทุกคนที่มีลิงก์ดูได้" จึงอ่านได้ตรง ๆ
 const CSV_URL = 'https://docs.google.com/spreadsheets/d/12zBOjd2iWCW2toi937n0BQ9gqA7bNFC8ahJWwyEfn_U/export?format=csv&gid=220672209';
+// ทุกแถวในแท็บ "บันทึกถอนเงิน" — ใช้ทำอันดับและสถิติแต่ละช่อง (จำนวนครั้ง ค่าเฉลี่ย ถอนล่าสุด)
+const LOG_URL = 'https://docs.google.com/spreadsheets/d/12zBOjd2iWCW2toi937n0BQ9gqA7bNFC8ahJWwyEfn_U/gviz/tq?tqx=out:csv&headers=0&sheet=' + encodeURIComponent('บันทึกถอนเงิน');
 const REFRESH_MS = 60000;
 
 const TH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
@@ -444,9 +512,163 @@ function renderHeat() {
   });
 }
 
+// ---------- อันดับ + สถิติแต่ละช่อง (จากแท็บบันทึกถอนเงิน) ----------
+function readLog(text) {
+  const out = [];
+  parseCSV(text).forEach((r) => {
+    if (r.length < 4) return;
+    const m = String(r[2] || '').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    const ch = String(r[0] || '').trim();
+    if (!m || !ch || String(r[1] || '').trim() === '') return;
+    out.push({channel: ch, amount: num(r[1]), y: +m[3], m: +m[2], d: +m[1], status: String(r[3] || '').trim()});
+  });
+  return out;
+}
+const fmtDay = (r) => r.d + ' ' + TH[r.m - 1];
+const daysAgo = (r) => { const now = new Date(); const t = new Date(r.y, r.m - 1, r.d); const n = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - t) / 864e5); return n <= 0 ? 'วันนี้' : n === 1 ? 'เมื่อวาน' : n + ' วันก่อน'; };
+const initial = (name) => name.replace(/^[เแโใไ]/, '').charAt(0) || '?';
+
+function channelStats() {
+  const year = +state.totals.year, k = state.k, today = new Date().getDate();
+  const ok = (state.log || []).filter((r) => r.y === year && r.status === 'สำเร็จ');
+  const names = [...new Set([...state.channels.map((c) => c.channel), ...ok.map((r) => r.channel)])];
+  const grand = d3.sum(ok, (r) => r.amount) || 0;
+  const list = names.map((name) => {
+    const rs = ok.filter((r) => r.channel === name);
+    const total = Math.round(d3.sum(rs, (r) => r.amount) * 100) / 100;
+    const byM = d3.rollup(rs, (v) => d3.sum(v, (r) => r.amount), (r) => r.m);
+    const bestM = [...byM.entries()].sort((a, b) => b[1] - a[1])[0];
+    const sorted = rs.slice().sort((a, b) => (a.m - b.m) || (a.d - b.d));
+    const maxR = rs.reduce((a, r) => (!a || r.amount > a.amount ? r : a), null);
+    const cur = k.sameYear ? d3.sum(rs.filter((r) => r.m === k.curNo), (r) => r.amount) : 0;
+    const prevSame = k.sameYear ? d3.sum(rs.filter((r) => r.m === k.curNo - 1 && r.d <= today), (r) => r.amount) : 0;
+    return {
+      name, total, count: rs.length, avg: rs.length ? total / rs.length : 0,
+      share: grand ? total / grand * 100 : 0,
+      max: maxR, last: sorted[sorted.length - 1] || null,
+      bestLabel: bestM ? TH[bestM[0] - 1] : '—', bestAmt: bestM ? bestM[1] : 0,
+      activeMonths: byM.size, cur, prevSame,
+      delta: prevSame ? (cur / prevSame - 1) * 100 : null,
+      monthly: monthRange().map((m) => ({month_no: m.month_no, amount: byM.get(m.month_no) || 0}))
+    };
+  });
+  const byTotal = list.slice().sort((a, b) => b.total - a.total);
+  byTotal.forEach((c, i) => { c.rankTotal = i + 1; });
+  return byTotal;
+}
+
+let sortKey = 'total';
+const SORTS = {
+  total: {get: (c) => c.total, fmt: (c) => '฿' + money(c.total), sub: (c) => c.share.toFixed(1) + '% ของรายได้ทั้งหมด'},
+  month: {get: (c) => c.cur, fmt: (c) => '฿' + money(c.cur), sub: (c) => 'เดือน ' + state.k.cur.label + ' (ยังไม่จบเดือน)'},
+  avg: {get: (c) => c.avg, fmt: (c) => '฿' + money(c.avg), sub: (c) => 'เฉลี่ยต่อการถอน 1 ครั้ง · ' + c.count + ' ครั้ง'},
+  count: {get: (c) => c.count, fmt: (c) => int(c.count) + ' ครั้ง', sub: (c) => 'รวม ฿' + money(c.total)}
+};
+const MEDALS = ['#F7B928', '#A8B0BA', '#C8814A'];
+
+function deltaEl(c) {
+  const s = document.createElement('span');
+  if (c.delta == null) { s.className = 'delta flat'; s.textContent = c.cur > 0 ? 'ใหม่' : '–'; return s; }
+  s.className = 'delta ' + (c.delta > 0.05 ? 'up' : c.delta < -0.05 ? 'down' : 'flat');
+  s.textContent = (c.delta > 0 ? '▲ +' : c.delta < 0 ? '▼ ' : '') + c.delta.toFixed(1) + '%';
+  return s;
+}
+
+function renderBoard() {
+  setText('r-year', state.totals.year);
+  const pod = $('podium'), body = $('lead-body');
+  pod.replaceChildren(); body.replaceChildren();
+  if (!state.log) {
+    const e = document.createElement('div'); e.className = 'empty'; e.textContent = 'อ่านแท็บ "บันทึกถอนเงิน" ไม่สำเร็จ จึงยังจัดอันดับไม่ได้'; pod.append(e); return;
+  }
+  const S = SORTS[sortKey];
+  const list = state.stats.slice().sort((a, b) => (S.get(b) - S.get(a)) || (b.total - a.total));
+  list.filter((c) => S.get(c) > 0).slice(0, 3).forEach((c, i) => {
+    const d = document.createElement('div'); d.className = 'pod' + (i === 0 ? ' p1' : '');
+    const head = document.createElement('div'); head.className = 'pod-rank';
+    const md = document.createElement('span'); md.className = 'medal'; md.style.background = MEDALS[i]; md.textContent = i + 1;
+    const nm = document.createElement('span'); nm.className = 'pod-name'; nm.textContent = c.name;
+    head.append(md, nm);
+    const v = document.createElement('span'); v.className = 'pod-val'; v.textContent = S.fmt(c);
+    const sub = document.createElement('span'); sub.className = 'pod-sub'; sub.textContent = S.sub(c);
+    d.append(head, v, sub); pod.append(d);
+  });
+  if (!pod.children.length) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = 'ยังไม่มีช่องที่มียอดตามเกณฑ์นี้'; pod.append(e); }
+  const maxTotal = d3.max(list, (c) => c.total) || 1;
+  list.forEach((c, i) => {
+    const tr = body.insertRow();
+    const n = tr.insertCell(); const rn = document.createElement('span'); rn.className = 'rankno'; rn.textContent = i + 1; n.append(rn);
+    whoCell(tr.insertCell(), c.name);
+    const t = tr.insertCell(); t.className = 'r'; t.textContent = money(c.total);
+    const sh = tr.insertCell(); const wrap = document.createElement('div'); wrap.style.display = 'flex'; wrap.style.alignItems = 'center'; wrap.style.gap = '8px';
+    const bar = document.createElement('div'); bar.className = 'bar'; bar.style.flex = '1';
+    const fill = document.createElement('i'); fill.style.width = (c.total / maxTotal * 100) + '%'; fill.style.background = colorOf(c.name);
+    bar.append(fill); const pct = document.createElement('span'); pct.className = 'num'; pct.style.fontSize = '12px'; pct.textContent = c.share.toFixed(1) + '%';
+    wrap.append(bar, pct); sh.append(wrap);
+    const cn = tr.insertCell(); cn.className = 'r'; cn.textContent = int(c.count);
+    const av = tr.insertCell(); av.className = 'r'; av.textContent = c.count ? money(c.avg) : '–';
+    const cu = tr.insertCell(); cu.className = 'r'; cu.textContent = c.cur ? money(c.cur) : '–';
+    const de = tr.insertCell(); de.className = 'r'; de.append(deltaEl(c));
+    const la = tr.insertCell(); la.className = 'r'; la.textContent = c.last ? fmtDay(c.last) : '–';
+  });
+}
+
+function renderChannelCards() {
+  const grid = $('chgrid'); grid.replaceChildren();
+  if (!state.log) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = 'อ่านแท็บ "บันทึกถอนเงิน" ไม่สำเร็จ'; grid.append(e); return; }
+  state.stats.forEach((c) => {
+    const card = document.createElement('article'); card.className = 'card chcard' + (c.total ? '' : ' idle');
+    const head = document.createElement('div'); head.className = 'chhead';
+    const av = document.createElement('span'); av.className = 'av'; av.style.background = colorOf(c.name); av.textContent = initial(c.name); av.setAttribute('aria-hidden', 'true');
+    const info = document.createElement('div'); info.style.minWidth = '0';
+    const nm = document.createElement('div'); nm.className = 'chname'; nm.textContent = c.name;
+    const meta = document.createElement('div'); meta.className = 'chmeta';
+    meta.textContent = c.last ? 'ถอนล่าสุด ' + fmtDay(c.last) + ' · ' + daysAgo(c.last) : 'ยังไม่มีการถอนในปีนี้';
+    info.append(nm, meta);
+    const badge = document.createElement('span'); badge.className = 'badge'; badge.textContent = c.total ? 'อันดับ ' + c.rankTotal : 'ยังไม่มีรายได้';
+    head.append(av, info, badge);
+    const tot = document.createElement('div');
+    const tl = document.createElement('div'); tl.className = 'label'; tl.textContent = 'รายได้รวม · ' + c.share.toFixed(1) + '% ของทั้งหมด';
+    const tv = document.createElement('div'); tv.className = 'chtotal'; tv.textContent = '฿' + money(c.total);
+    tot.append(tl, tv);
+    const dl = document.createElement('dl'); dl.className = 'stats';
+    const add = (k, v) => { const w = document.createElement('div'); const dt = document.createElement('dt'); dt.textContent = k; const dd = document.createElement('dd'); if (v instanceof Node) dd.append(v); else dd.textContent = v; w.append(dt, dd); dl.append(w); };
+    add('จำนวนครั้งที่ถอน', int(c.count) + ' ครั้ง');
+    add('เฉลี่ยต่อครั้ง', c.count ? '฿' + money(c.avg) : '–');
+    add('ถอนสูงสุดต่อครั้ง', c.max ? '฿' + money(c.max.amount) : '–');
+    add('เดือนที่ดีที่สุด', c.bestAmt ? c.bestLabel + ' · ฿' + short(c.bestAmt) : '–');
+    add('เดือนนี้ (' + state.k.cur.label + ')', c.cur ? '฿' + money(c.cur) : '–');
+    const dwrap = document.createElement('span'); dwrap.append(deltaEl(c));
+    add('เทียบเดือนก่อน*', dwrap);
+    add('เดือนที่มีรายได้', c.activeMonths + ' เดือน');
+    add('ส่วนแบ่งรายได้', c.share.toFixed(1) + '%');
+    const sp = document.createElement('div'); sp.className = 'chspark';
+    card.append(head, tot, dl, sp);
+    grid.append(card);
+    if (c.total) {
+      const W = Math.max(200, sp.clientWidth || 240), H = 44;
+      const x = d3.scaleBand().domain(c.monthly.map((d) => d.month_no)).range([0, W]).padding(0.25);
+      const y = d3.scaleLinear().domain([0, d3.max(c.monthly, (d) => d.amount) || 1]).range([H - 2, 3]);
+      const svg = d3.select(sp).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('preserveAspectRatio', 'none').attr('role', 'img').attr('aria-label', 'รายได้รายเดือนของ ' + c.name);
+      svg.selectAll('rect').data(c.monthly).join('rect').attr('x', (d) => x(d.month_no)).attr('width', x.bandwidth()).attr('rx', 2)
+        .attr('y', (d) => (d.amount ? y(d.amount) : H - 3)).attr('height', (d) => (d.amount ? H - 2 - y(d.amount) : 1))
+        .style('fill', colorOf(c.name)).style('opacity', (d) => (d.month_no === state.k.curNo && state.k.sameYear ? 0.5 : 0.9))
+        .append('title').text((d) => TH[d.month_no - 1] + ' · ฿' + money(d.amount));
+    }
+  });
+}
+
+document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => {
+  sortKey = b.dataset.sort;
+  document.querySelectorAll('.seg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  if (state) renderBoard();
+}));
+
 function renderAll() {
   if (!state) return;
   renderText(); renderSpark(); renderLegend(); renderStacked(); renderDonut(); renderRanking(); renderHeat();
+  state.stats = state.log ? channelStats() : [];
+  renderBoard(); renderChannelCards();
   drawnOnce = true;
 }
 
@@ -457,11 +679,17 @@ async function load() {
   if (state) setText('updated', 'กำลังอัปเดต…');
   try {
     if (CSV_URL.startsWith('PASTE_')) throw new Error('ยังไม่ได้ใส่ลิงก์ CSV ของชีตในไฟล์ index.html');
-    const res = await fetch(CSV_URL + (CSV_URL.includes('?') ? '&' : '?') + '_=' + Date.now(), {cache: 'no-store'});
-    if (!res.ok) throw new Error('Google ตอบกลับรหัส ' + res.status + ' — ตรวจว่าชีตยังเผยแพร่ไปยังเว็บอยู่');
+    const bust = (u) => u + (u.includes('?') ? '&' : '?') + '_=' + Date.now();
+    const [res, logText] = await Promise.all([
+      fetch(bust(CSV_URL), {cache: 'no-store'}),
+      fetch(bust(LOG_URL), {cache: 'no-store'}).then((r) => (r.ok ? r.text() : null)).catch(() => null)
+    ]);
+    if (!res.ok) throw new Error('Google ตอบกลับรหัส ' + res.status + ' — ตรวจว่าชีตยังแชร์แบบ "ทุกคนที่มีลิงก์ดูได้"');
     const text = await res.text();
     const data = readSheet(text);
-    state = {...data, k: summarize(data)};
+    let log = null;
+    try { log = logText ? readLog(logText) : null; } catch (e) { log = null; }
+    state = {...data, log, k: summarize(data)};
     renderAll();
     $('error').hidden = true;
     $('dot').classList.remove('err');
