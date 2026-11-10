@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>รายได้แอฟฟิลิเอต</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap">
+<style>
+/* Layout: แถบหัวน้ำเงินแบบ Meta → การ์ดตัวเลข → ไฮไลต์ → กราฟรายเดือน → สัดส่วน + ช่อง×เดือน */
+:root {
+  --b: #1877F2; --b-deep: #0B5FCC; --b-soft: rgba(24,119,242,.10);
+  --bg: #F0F2F5; --panel: #FFFFFF; --fg: #1C1E21; --muted: #65676B; --line: #E4E6EB;
+  --ok: #2E9E44; --bad: #E0243A; --grid: #EDEFF2; --axis: #CED0D4;
+  --pop: #FFFFFF; --shadow: 0 1px 3px rgba(0,0,0,.08);
+  --font: "IBM Plex Sans Thai", -apple-system, "Segoe UI", "Helvetica Neue", Tahoma, sans-serif;
+  --r: 12px; color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --b: #2D88FF; --b-deep: #1466D6; --b-soft: rgba(45,136,255,.16);
+  --bg: #18191A; --panel: #242526; --fg: #E4E6EB; --muted: #B0B3B8; --line: #3A3B3C;
+  --ok: #45BD62; --bad: #F25268; --grid: #333436; --axis: #4E4F50; --pop: #303132; --shadow: 0 1px 3px rgba(0,0,0,.4);
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --b: #2D88FF; --b-deep: #1466D6; --b-soft: rgba(45,136,255,.16);
+  --bg: #18191A; --panel: #242526; --fg: #E4E6EB; --muted: #B0B3B8; --line: #3A3B3C;
+  --ok: #45BD62; --bad: #F25268; --grid: #333436; --axis: #4E4F50; --pop: #303132; --shadow: 0 1px 3px rgba(0,0,0,.4);
+  color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 15px; line-height: 1.5;
+  padding-top: env(safe-area-inset-top, 0px); padding-bottom: max(24px, env(safe-area-inset-bottom, 0px)); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 20px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 16px; }
+.num { font-variant-numeric: tabular-nums; }
+
+.top { background: linear-gradient(135deg, var(--b) 0%, var(--b-deep) 100%); color: #fff; border-radius: var(--r); padding: 20px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.logo { width: 48px; height: 48px; border-radius: 50%; background: #fff; color: #1877F2; display: grid; place-items: center; font-weight: 700; font-size: 24px; flex: none; }
+.titles { flex: 1 1 220px; min-width: 0; }
+.eyebrow { margin: 0; font-size: 12px; letter-spacing: .08em; opacity: .85; font-weight: 600; }
+h1 { margin: 2px 0 0; font-size: 28px; font-weight: 700; line-height: 1.2; text-wrap: balance; }
+.sub { margin: 4px 0 0; font-size: 13px; opacity: .88; }
+.live { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pill { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.28); border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: #45D46B; }
+.dot.err { background: #FFB4B4; }
+@media (prefers-reduced-motion: no-preference) { .dot:not(.err) { animation: pulse 2s infinite; } }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(69,212,107,.7); } 70% { box-shadow: 0 0 0 8px rgba(69,212,107,0); } 100% { box-shadow: 0 0 0 0 rgba(69,212,107,0); } }
+.btn { appearance: none; border: 0; background: #fff; color: #1877F2; font: inherit; font-weight: 700; font-size: 13px; border-radius: 8px; padding: 7px 14px; cursor: pointer; }
+.btn:hover { background: #E7F0FD; }
+.btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); box-shadow: var(--shadow); padding: 20px; min-width: 0; }
+h2 { margin: 0; font-size: 17px; font-weight: 700; }
+.hrow { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.note { margin: 0; font-size: 13px; color: var(--muted); }
+.label { font-size: 13px; color: var(--muted); font-weight: 600; }
+
+.hero { display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 980px) { .hero { grid-template-columns: repeat(2, minmax(0, 1fr)); } .hero > .big { grid-column: 1 / -1; } }
+@media (max-width: 480px) { .hero { grid-template-columns: 1fr; } }
+.big { display: flex; flex-direction: column; gap: 6px; background: linear-gradient(180deg, var(--b-soft), transparent 70%), var(--panel); }
+.big-val { font-size: 40px; font-weight: 700; line-height: 1.1; color: var(--b); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.spark { height: 56px; margin-top: auto; }
+.spark svg { display: block; width: 100%; height: 56px; }
+.kpi { display: flex; flex-direction: column; gap: 6px; }
+.kpi-val { font-size: 26px; font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.foot { font-size: 13px; color: var(--muted); line-height: 1.55; }
+.chip { display: inline-block; border-radius: 999px; padding: 1px 8px; font-weight: 700; font-variant-numeric: tabular-nums; background: var(--b-soft); color: var(--b); }
+.meter { height: 6px; border-radius: 3px; background: var(--b-soft); overflow: hidden; }
+.meter i { display: block; height: 100%; width: 0; background: var(--b); border-radius: 3px; transition: width .6s ease-out; }
+
+.insights { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 16px; list-style: none; margin: 0; padding: 0; }
+.insights li { display: flex; gap: 12px; align-items: flex-start; line-height: 1.6; }
+.ico { flex: none; width: 32px; height: 32px; border-radius: 8px; background: var(--b-soft); color: var(--b); display: grid; place-items: center; font-weight: 700; }
+.insights b { color: var(--b); font-variant-numeric: tabular-nums; }
+
+.chart { position: relative; min-height: 300px; }
+.chart svg { display: block; width: 100%; }
+.axis text { fill: var(--muted); font-size: 12px; font-family: var(--font); }
+.axis path, .axis line { stroke: var(--axis); }
+.grid line { stroke: var(--grid); }
+.grid path { display: none; }
+.tot { fill: var(--fg); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; font-family: var(--font); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0 0 10px; padding: 0; list-style: none; font-size: 13px; color: var(--muted); }
+.legend li { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex: none; }
+.tip { position: absolute; pointer-events: none; background: var(--pop); border: 1px solid var(--line); box-shadow: 0 6px 20px rgba(0,0,0,.15); border-radius: 8px; padding: 8px 10px; font-size: 12px; z-index: 3; min-width: 180px; }
+.tip strong { display: block; font-size: 14px; margin-bottom: 4px; }
+.tip div { display: flex; justify-content: space-between; gap: 12px; font-variant-numeric: tabular-nums; }
+.tip span { color: var(--muted); }
+.empty { display: grid; place-items: center; min-height: 220px; color: var(--muted); font-size: 13px; text-align: center; padding: 16px; }
+
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 16px; }
+.donutwrap { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+.donut { flex: 0 0 170px; height: 170px; margin-inline: auto; }
+.tablewrap { overflow-x: auto; flex: 1 1 220px; min-width: 0; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 8px; border-bottom: 1px solid var(--line); vertical-align: middle; white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+.r { text-align: right; }
+.who { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+.heat td.cell { text-align: right; border-radius: 6px; border-bottom: 2px solid var(--panel); border-left: 2px solid var(--panel); font-size: 12px; }
+.heat td.cell.zero { color: var(--muted); }
+.pagefoot { font-size: 12px; color: var(--muted); line-height: 1.6; margin: 0; }
+.err-box { background: color-mix(in srgb, var(--bad) 10%, var(--panel)); border-color: color-mix(in srgb, var(--bad) 40%, var(--line)); }
+.loading .val-slot { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="logo" aria-hidden="true">฿</div>
+    <div class="titles">
+      <p class="eyebrow">รายงานผลงาน · ปี <span id="year">—</span></p>
+      <h1>รายได้แอฟฟิลิเอต</h1>
+      <p class="sub">ยอดถอนเงินจริงจาก Google Sheet · หน่วย: บาท</p>
+    </div>
+    <div class="live">
+      <span class="pill"><span class="dot" id="dot"></span><span id="updated">กำลังโหลด…</span></span>
+      <button type="button" class="btn" id="refresh">รีเฟรช</button>
+    </div>
+  </header>
+
+  <section class="card err-box" id="error" hidden>
+    <h2>ดึงข้อมูลจากชีตไม่สำเร็จ</h2>
+    <p class="note" id="error-msg"></p>
+  </section>
+
+  <section class="hero">
+    <div class="card big">
+      <span class="label">รายได้ถอนสำเร็จทั้งปี</span>
+      <span class="big-val">฿<span id="k-total">—</span></span>
+      <span class="foot">เริ่มมีรายได้เดือน <span id="k-first">—</span> · ไม่สำเร็จ ฿<span id="k-failed">—</span> · ยังไม่เลือกสถานะ ฿<span id="k-pending">—</span></span>
+      <div class="spark" id="spark"></div>
+    </div>
+    <div class="card kpi">
+      <span class="label">เดือนนี้ · <span id="k-cur-label">—</span> (ยังไม่จบเดือน)</span>
+      <span class="kpi-val">฿<span id="k-cur">—</span></span>
+      <div class="meter"><i id="k-meter"></i></div>
+      <span class="foot">ทำได้ <span class="chip" id="k-pct">—</span> ของ <span id="k-prev-label">—</span> ทั้งเดือน (฿<span id="k-prev">—</span>) ในเวลา <span id="k-day">—</span> วัน</span>
+    </div>
+    <div class="card kpi">
+      <span class="label">เฉลี่ยต่อเดือน</span>
+      <span class="kpi-val">฿<span id="k-avg">—</span></span>
+      <span class="foot">คิดจาก <span id="k-done">—</span> เดือนที่จบแล้วและมีรายได้</span>
+    </div>
+    <div class="card kpi">
+      <span class="label">เดือนที่ดีที่สุด</span>
+      <span class="kpi-val">฿<span id="k-best">—</span></span>
+      <span class="foot">เดือน <span id="k-best-label">—</span></span>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="hrow"><h2>ไฮไลต์</h2></div>
+    <ul class="insights">
+      <li><span class="ico" aria-hidden="true">↑</span><span>เดือนที่ทำรายได้สูงสุดคือ <b id="i-best-label">—</b> ได้ <b>฿<span id="i-best">—</span></b> สูงกว่าค่าเฉลี่ยต่อเดือน <b><span id="i-best-vs">—</span>%</b></span></li>
+      <li><span class="ico" aria-hidden="true">★</span><span><b id="i-top">—</b> เป็นช่องหลัก ทำรายได้ <b><span id="i-top-share">—</span>%</b> ของทั้งหมด ตามด้วย <b id="i-second">—</b> <b><span id="i-second-share">—</span>%</b></span></li>
+      <li><span class="ico" aria-hidden="true">◎</span><span>มีช่องที่สร้างรายได้แล้ว <b id="i-active">—</b> จาก <b id="i-all">—</b> ช่อง · รายการถอนไม่สำเร็จรวม <b>฿<span id="i-failed">—</span></b></span></li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <div class="hrow">
+      <h2>รายได้รายเดือน แยกตามช่อง</h2>
+      <p class="note">ชี้หรือแตะแท่งเพื่อดูยอดของแต่ละช่อง · แท่งจาง = เดือนที่ยังไม่จบ</p>
+    </div>
+    <ul class="legend" id="legend"></ul>
+    <div class="chart" id="stacked"><div class="empty">กำลังโหลด…</div></div>
+  </section>
+
+  <div class="two">
+    <section class="card">
+      <div class="hrow"><h2>สัดส่วนรายได้ตามช่อง</h2></div>
+      <div class="donutwrap">
+        <div class="donut" id="donut"></div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>ช่อง</th><th class="r">ยอด (บาท)</th><th class="r">สัดส่วน</th></tr></thead>
+            <tbody id="ranking"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+    <section class="card">
+      <div class="hrow"><h2>ช่อง × เดือน</h2><p class="note">สีเข้ม = ยอดสูง</p></div>
+      <div class="tablewrap">
+        <table class="heat"><thead id="heat-head"></thead><tbody id="heat-body"></tbody></table>
+      </div>
+    </section>
+  </div>
+
+  <p class="pagefoot">ตัวเลขทั้งหมดมาจากแท็บ "แดชบอร์ด" ในชีต ซึ่งรวมยอดจากทุกแถวในแท็บ "บันทึกถอนเงิน" ตามวันที่ถอน · เปลี่ยนปีได้ที่ช่องเลขปีในชีต · หน้านี้ดึงข้อมูลใหม่ทุกครั้งที่เปิด และทุก 1 นาทีขณะเปิดค้างไว้ (Google อาจใช้เวลาไม่กี่นาทีกว่าจะส่งตัวเลขใหม่หลังแก้ชีต)</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+// ลิงก์ CSV ของแท็บ "แดชบอร์ด" (gid=220672209) — ชีตแชร์แบบ "ทุกคนที่มีลิงก์ดูได้" จึงอ่านได้ตรง ๆ
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/12zBOjd2iWCW2toi937n0BQ9gqA7bNFC8ahJWwyEfn_U/export?format=csv&gid=220672209';
+const REFRESH_MS = 60000;
+
+const TH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+const PALETTE = ['#1877F2', '#42B72A', '#F7B928', '#F02849', '#A033FF', '#00A3A3', '#FF7A00', '#5B7083'];
+const money = d3.format(',.2f');
+const int = d3.format(',');
+const short = (v) => (v >= 1e6 ? (v / 1e6).toFixed(2) + 'M' : v >= 1000 ? (v / 1000).toFixed(v >= 100000 ? 0 : 1) + 'K' : String(Math.round(v)));
+const $ = (id) => document.getElementById(id);
+const setText = (id, v) => { const el = $(id); if (el) el.textContent = v == null || v === '' ? '—' : v; };
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+let state = null, drawnOnce = false;
+
+// ---------- อ่าน CSV ----------
+function parseCSV(text) {
+  const rows = []; let row = [], cell = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) { if (ch === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === ',') { row.push(cell); cell = ''; }
+    else if (ch === '\n') { row.push(cell.replace(/\r$/, '')); rows.push(row); row = []; cell = ''; }
+    else cell += ch;
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows;
+}
+const num = (s) => { const v = Number(String(s || '').replace(/[,%\s฿]/g, '')); return isFinite(v) ? v : 0; };
+
+function readSheet(text) {
+  const rows = parseCSV(text);
+  const find = (pred) => rows.findIndex((r) => pred(r));
+  const yi = find((r) => (r[0] || '').startsWith('ปี ค.ศ.'));
+  const ti = find((r) => r[0] === 'ถอนสำเร็จ');
+  if (ti < 0) throw new Error('ไม่พบการ์ดสรุปยอด — ตรวจว่าลิงก์ที่เผยแพร่เป็นแท็บ "แดชบอร์ด" และรูปแบบ CSV');
+  const tv = rows[ti + 1] || [];
+  const totals = {year: yi >= 0 ? String(rows[yi][1] || '').trim() : '', success: num(tv[0]), failed: num(tv[1]), pending: num(tv[2]), total: num(tv[3])};
+
+  const ci = find((r) => r[0] === 'ช่อง' && r[1] === 'สำเร็จ');
+  const channels = [];
+  for (let i = ci + 1; ci >= 0 && i < rows.length; i++) {
+    const r = rows[i]; if (r[0] === 'รวมทุกช่อง') break; if (!r[0]) continue;
+    channels.push({channel: r[0], success: num(r[1]), failed: num(r[2]), total: num(r[3]), share: num(r[4])});
+  }
+
+  const mi = find((r) => r[0] === 'เดือน' && r[1] === 'สำเร็จ');
+  const months = [];
+  for (let i = mi + 1; mi >= 0 && i < rows.length; i++) {
+    const r = rows[i]; if (r[0] === 'รวมทั้งปี' || !r[0]) break;
+    months.push({month_no: TH.indexOf(r[0]) + 1 || months.length + 1, label: r[0], success: num(r[1]), failed: num(r[2])});
+  }
+
+  const xi = find((r) => r[0] === 'เดือน' && r[1] && r[1] !== 'สำเร็จ');
+  const matrix = [];
+  if (xi >= 0) {
+    const head = rows[xi], cols = [];
+    for (let c = 1; c < head.length; c++) { if (!head[c]) break; cols.push([c, head[c]]); }
+    for (let i = xi + 1; i < rows.length; i++) {
+      const r = rows[i]; if (r[0] === 'รวมทั้งปี' || !r[0]) break;
+      const mno = TH.indexOf(r[0]) + 1;
+      cols.forEach(([c, name]) => matrix.push({month_no: mno, channel: name, amount: num(r[c])}));
+    }
+  }
+  return {totals, channels, months, matrix};
+}
+
+function summarize({totals, channels, months}) {
+  const r2 = (x) => Math.round(x * 100) / 100, r1 = (x) => Math.round(x * 10) / 10;
+  const now = new Date();
+  const sameYear = String(now.getFullYear()) === String(totals.year);
+  const curNo = sameYear ? now.getMonth() + 1 : 12;
+  const cur = months.find((m) => m.month_no === curNo) || {success: 0, label: TH[curNo - 1]};
+  const prev = months.find((m) => m.month_no === curNo - 1) || {success: 0, label: '—'};
+  const done = months.filter((m) => m.month_no < curNo && m.success > 0);
+  const avg = done.length ? r2(d3.sum(done, (m) => m.success) / done.length) : 0;
+  const best = months.reduce((a, m) => (m.success > a.success ? m : a), {success: 0, label: '—'});
+  const first = months.find((m) => m.success > 0);
+  const ranked = channels.slice().sort((a, b) => b.success - a.success);
+  return {
+    curNo, sameYear, cur, prev, avg, best, first, ranked, done: done.length,
+    pctOfPrev: prev.success ? r1(cur.success / prev.success * 100) : null,
+    day: sameYear ? now.getDate() : null,
+    bestVsAvg: avg ? r1((best.success / avg - 1) * 100) : null
+  };
+}
+
+// ---------- วาด ----------
+const colorOf = (name) => { const o = state.k.ranked.map((c) => c.channel); const i = o.indexOf(name); return PALETTE[(i < 0 ? o.length : i) % PALETTE.length]; };
+const monthRange = () => {
+  const firstNo = state.k.first ? state.k.first.month_no : 1;
+  return state.months.filter((m) => m.month_no >= firstNo && m.month_no <= state.k.curNo);
+};
+const swatch = (color) => { const s = document.createElement('span'); s.className = 'sw'; s.style.background = color; return s; };
+const whoCell = (td, name) => { const w = document.createElement('span'); w.className = 'who'; const n = document.createElement('span'); n.textContent = name; w.append(swatch(colorOf(name)), n); td.append(w); };
+
+function renderText() {
+  const {totals} = state, k = state.k;
+  setText('year', totals.year);
+  setText('k-total', money(totals.success));
+  setText('k-first', k.first ? k.first.label : '—');
+  setText('k-failed', money(totals.failed));
+  setText('k-pending', money(totals.pending));
+  setText('k-cur-label', k.cur.label);
+  setText('k-cur', money(k.cur.success));
+  setText('k-pct', k.pctOfPrev == null ? '—' : k.pctOfPrev.toFixed(1) + '%');
+  setText('k-prev-label', k.prev.label);
+  setText('k-prev', money(k.prev.success));
+  setText('k-day', k.day == null ? 'ทั้ง' : int(k.day));
+  $('k-meter').style.width = (k.pctOfPrev == null ? 0 : Math.min(100, k.pctOfPrev)) + '%';
+  setText('k-avg', money(k.avg));
+  setText('k-done', int(k.done));
+  setText('k-best', money(k.best.success));
+  setText('k-best-label', k.best.label);
+  setText('i-best-label', k.best.label);
+  setText('i-best', money(k.best.success));
+  setText('i-best-vs', k.bestVsAvg == null ? '—' : k.bestVsAvg.toFixed(1));
+  setText('i-top', k.ranked[0] ? k.ranked[0].channel : '—');
+  setText('i-top-share', k.ranked[0] ? k.ranked[0].share.toFixed(1) : '—');
+  setText('i-second', k.ranked[1] ? k.ranked[1].channel : '—');
+  setText('i-second-share', k.ranked[1] ? k.ranked[1].share.toFixed(1) : '—');
+  setText('i-active', int(state.channels.filter((c) => c.success > 0).length));
+  setText('i-all', int(state.channels.length));
+  setText('i-failed', money(totals.failed));
+}
+
+function renderSpark() {
+  const el = $('spark'); el.replaceChildren();
+  const data = monthRange(); if (!data.length) return;
+  const W = Math.max(160, el.clientWidth || 200), H = 56;
+  const x = d3.scaleBand().domain(data.map((d) => d.month_no)).range([0, W]).padding(0.25);
+  const y = d3.scaleLinear().domain([0, d3.max(data, (d) => d.success) || 1]).range([H - 2, 4]);
+  const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('preserveAspectRatio', 'none').attr('role', 'img').attr('aria-label', 'แนวโน้มรายได้รายเดือน');
+  svg.selectAll('rect').data(data).join('rect').attr('x', (d) => x(d.month_no)).attr('width', x.bandwidth()).attr('rx', 3)
+    .attr('y', (d) => y(d.success)).attr('height', (d) => H - 2 - y(d.success))
+    .style('fill', 'var(--b)').style('opacity', (d) => (d.month_no === state.k.curNo && state.k.sameYear ? 0.45 : 0.85));
+}
+
+function renderLegend() {
+  $('legend').replaceChildren(...state.k.ranked.map((c) => { const li = document.createElement('li'); li.append(swatch(colorOf(c.channel)), document.createTextNode(c.channel)); return li; }));
+}
+
+function renderStacked() {
+  const el = $('stacked'); el.replaceChildren();
+  const range = monthRange();
+  if (!range.length) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = 'ยังไม่มีรายได้ในปีนี้'; el.append(e); return; }
+  const keys = state.k.ranked.map((c) => c.channel);
+  const rows = range.map((m) => {
+    const o = {month_no: m.month_no, label: m.label, total: m.success};
+    keys.forEach((c) => { const hit = state.matrix.find((r) => r.month_no === m.month_no && r.channel === c); o[c] = hit ? hit.amount : 0; });
+    return o;
+  });
+  const W = Math.max(300, el.clientWidth || 600), H = 320;
+  const m = {top: 24, right: 8, bottom: 28, left: 40};
+  const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('height', H).attr('role', 'img').attr('aria-label', 'กราฟแท่งซ้อน รายได้ถอนสำเร็จรายเดือนแยกตามช่อง');
+  const y = d3.scaleLinear().domain([0, d3.max(rows, (d) => d.total) || 1]).nice().range([H - m.bottom, m.top]);
+  const probe = svg.append('g').attr('class', 'axis').append('text').text(short(y.domain()[1]));
+  m.left = Math.ceil(probe.node().getComputedTextLength() || 30) + 12;
+  probe.node().parentNode.remove();
+  const x = d3.scaleBand().domain(rows.map((d) => d.month_no)).range([m.left, W - m.right]).padding(0.32);
+  svg.append('g').attr('class', 'grid').attr('transform', `translate(${m.left},0)`).call(d3.axisLeft(y).ticks(5).tickSize(-(W - m.left - m.right)).tickFormat(''));
+  svg.append('g').attr('class', 'axis').attr('transform', `translate(${m.left},0)`).call(d3.axisLeft(y).ticks(5).tickFormat(short).tickSize(0)).call((g) => g.select('.domain').remove()).selectAll('text').attr('dx', '-6');
+  const xa = svg.append('g').attr('class', 'axis').attr('transform', `translate(0,${H - m.bottom})`).call(d3.axisBottom(x).tickSize(0).tickFormat((n) => rows.find((r) => r.month_no === n).label));
+  xa.select('.domain').remove(); xa.selectAll('text').attr('dy', '1.2em');
+  const isCur = (n) => n === state.k.curNo && state.k.sameYear;
+  const animate = !drawnOnce && !reduceMotion;
+  d3.stack().keys(keys)(rows).forEach((layer) => {
+    const rects = svg.append('g').style('fill', colorOf(layer.key)).selectAll('rect').data(layer).join('rect')
+      .attr('x', (d) => x(d.data.month_no)).attr('width', x.bandwidth()).style('opacity', (d) => (isCur(d.data.month_no) ? 0.5 : 1));
+    if (animate) rects.attr('y', y(0)).attr('height', 0).transition().duration(700).ease(d3.easeCubicOut).attr('y', (d) => y(d[1])).attr('height', (d) => Math.max(0, y(d[0]) - y(d[1])));
+    else rects.attr('y', (d) => y(d[1])).attr('height', (d) => Math.max(0, y(d[0]) - y(d[1])));
+  });
+  if (x.bandwidth() >= 24) {
+    svg.append('g').selectAll('text').data(rows.filter((d) => d.total > 0)).join('text').attr('class', 'tot').attr('text-anchor', 'middle')
+      .attr('x', (d) => x(d.month_no) + x.bandwidth() / 2).attr('y', (d) => y(d.total) - 6).text((d) => short(d.total));
+  }
+  const tip = document.createElement('div'); tip.className = 'tip'; tip.hidden = true; el.append(tip);
+  const show = (ev, d) => {
+    const head = document.createElement('strong');
+    head.textContent = d.label + (isCur(d.month_no) ? ' (ยังไม่จบเดือน)' : '') + ' · ฿' + money(d.total);
+    const lines = keys.filter((c) => d[c] > 0).map((c) => { const row = document.createElement('div'); const l = document.createElement('span'); l.textContent = c; const v = document.createElement('b'); v.textContent = money(d[c]); row.append(l, v); return row; });
+    tip.replaceChildren(head, ...lines); tip.hidden = false;
+    const box = el.getBoundingClientRect();
+    const p = ev.touches ? ev.touches[0] : ev;
+    tip.style.left = Math.min(Math.max(0, p.clientX - box.left - tip.offsetWidth / 2), box.width - tip.offsetWidth) + 'px';
+    tip.style.top = Math.max(0, p.clientY - box.top - tip.offsetHeight - 14) + 'px';
+  };
+  svg.append('g').selectAll('rect').data(rows).join('rect')
+    .attr('x', (d) => x(d.month_no) - x.step() * x.paddingInner() / 2).attr('width', x.step()).attr('y', m.top).attr('height', H - m.top - m.bottom)
+    .style('fill', 'transparent').style('cursor', 'pointer')
+    .on('mousemove', show).on('touchstart', show, {passive: true}).on('mouseleave', () => { tip.hidden = true; });
+}
+
+function renderDonut() {
+  const el = $('donut'); el.replaceChildren();
+  const data = state.k.ranked.filter((c) => c.success > 0);
+  const S = 170, R = S / 2;
+  const svg = d3.select(el).append('svg').attr('width', S).attr('height', S).attr('viewBox', `0 0 ${S} ${S}`).attr('role', 'img').attr('aria-label', 'แผนภูมิวงกลมสัดส่วนรายได้ตามช่อง');
+  const g = svg.append('g').attr('transform', `translate(${R},${R})`);
+  g.selectAll('path').data(d3.pie().value((d) => d.success).sort(null).padAngle(0.015)(data)).join('path')
+    .attr('d', d3.arc().innerRadius(R * 0.62).outerRadius(R).cornerRadius(3)).style('fill', (d) => colorOf(d.data.channel));
+  g.append('text').attr('text-anchor', 'middle').attr('dy', '-0.2em').style('fill', 'var(--muted)').style('font-size', '12px').style('font-family', 'var(--font)').text('ช่องหลัก');
+  g.append('text').attr('text-anchor', 'middle').attr('dy', '1.1em').style('fill', 'var(--b)').style('font-size', '22px').style('font-weight', '700').style('font-family', 'var(--font)')
+    .text(data[0] ? data[0].share.toFixed(1) + '%' : '—');
+}
+
+function renderRanking() {
+  const tb = $('ranking'); tb.replaceChildren();
+  state.k.ranked.forEach((r) => {
+    const tr = tb.insertRow();
+    whoCell(tr.insertCell(), r.channel);
+    const a = tr.insertCell(); a.className = 'r'; a.textContent = money(r.success);
+    const s = tr.insertCell(); s.className = 'r'; s.textContent = r.share.toFixed(1) + '%';
+  });
+}
+
+function renderHeat() {
+  const range = monthRange();
+  const head = $('heat-head'), body = $('heat-body');
+  head.replaceChildren(); body.replaceChildren();
+  const tr = document.createElement('tr');
+  const th0 = document.createElement('th'); th0.textContent = 'ช่อง'; tr.append(th0);
+  range.forEach((m) => { const th = document.createElement('th'); th.className = 'r'; th.textContent = m.label; tr.append(th); });
+  head.append(tr);
+  if (!range.length) return;
+  const lo = range[0].month_no, hi = range[range.length - 1].month_no;
+  const max = d3.max(state.matrix.filter((r) => r.month_no >= lo && r.month_no <= hi), (r) => r.amount) || 1;
+  state.k.ranked.forEach((c) => {
+    const row = body.insertRow();
+    whoCell(row.insertCell(), c.channel);
+    range.forEach((m) => {
+      const hit = state.matrix.find((r) => r.month_no === m.month_no && r.channel === c.channel);
+      const v = hit ? hit.amount : 0;
+      const td = row.insertCell();
+      td.className = 'cell' + (v ? '' : ' zero');
+      const a = v ? 0.12 + 0.78 * (v / max) : 0;
+      td.style.background = v ? `rgba(24,119,242,${a.toFixed(2)})` : 'transparent';
+      if (a > 0.55) td.style.color = '#fff';
+      td.textContent = v ? short(v) : '–';
+      td.title = c.channel + ' · ' + m.label + ' · ฿' + money(v);
+    });
+  });
+}
+
+function renderAll() {
+  if (!state) return;
+  renderText(); renderSpark(); renderLegend(); renderStacked(); renderDonut(); renderRanking(); renderHeat();
+  drawnOnce = true;
+}
+
+// ---------- โหลด ----------
+let loading = false;
+async function load() {
+  if (loading) return; loading = true;
+  if (state) setText('updated', 'กำลังอัปเดต…');
+  try {
+    if (CSV_URL.startsWith('PASTE_')) throw new Error('ยังไม่ได้ใส่ลิงก์ CSV ของชีตในไฟล์ index.html');
+    const res = await fetch(CSV_URL + (CSV_URL.includes('?') ? '&' : '?') + '_=' + Date.now(), {cache: 'no-store'});
+    if (!res.ok) throw new Error('Google ตอบกลับรหัส ' + res.status + ' — ตรวจว่าชีตยังเผยแพร่ไปยังเว็บอยู่');
+    const text = await res.text();
+    const data = readSheet(text);
+    state = {...data, k: summarize(data)};
+    renderAll();
+    $('error').hidden = true;
+    $('dot').classList.remove('err');
+    setText('updated', 'ข้อมูลสด · อัปเดต ' + new Date().toLocaleTimeString('th-TH', {hour: '2-digit', minute: '2-digit', second: '2-digit'}));
+  } catch (e) {
+    $('error').hidden = false;
+    setText('error-msg', e.message + (state ? ' · ตัวเลขที่เห็นเป็นข้อมูลรอบก่อน' : ''));
+    $('dot').classList.add('err');
+    setText('updated', state ? 'อัปเดตไม่สำเร็จ' : 'โหลดไม่สำเร็จ');
+    if (!state) { const s = $('stacked'); s.replaceChildren(); const d = document.createElement('div'); d.className = 'empty'; d.textContent = 'โหลดข้อมูลไม่สำเร็จ'; s.append(d); }
+  } finally { loading = false; }
+}
+
+$('refresh').addEventListener('click', load);
+setInterval(() => { if (!document.hidden) load(); }, REFRESH_MS);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(renderAll, 150); });
+load();
+</script>
+</body>
+</html>
